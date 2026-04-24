@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api',
 });
 
 API.interceptors.request.use((config) => {
@@ -12,9 +12,6 @@ API.interceptors.request.use((config) => {
   return config;
 });
 
-// ─────────────────────────────────────────────
-// AUTH
-// ─────────────────────────────────────────────
 export const register = (data) => API.post('/auth/register', data);
 export const login = (data) => API.post('/auth/login', data);
 export const forgotPassword = (email) => API.post('/auth/forgot-password', { email });
@@ -24,10 +21,6 @@ export const updateProfile = (data) => API.put('/auth/profile', data);
 export const deleteAccount = (data) => API.delete('/auth/account', { data });
 export const requestEmailChange = (data) => API.post('/auth/email-change/request', data);
 export const confirmEmailChange = (data) => API.post('/auth/email-change/confirm', data);
-
-// ─────────────────────────────────────────────
-// GROUPS
-// ─────────────────────────────────────────────
 export const createGroup = (data) => API.post('/groups/create', data);
 export const joinGroup = (inviteCode) => API.post('/groups/join', { inviteCode });
 export const getMyGroups = () => API.get('/groups/my');
@@ -38,11 +31,7 @@ export const removeMember = (groupId, memberId) => API.delete(`/groups/${groupId
 export const deleteGroup = (groupId) => API.delete(`/groups/${groupId}`);
 export const regenerateCode = (groupId) => API.post(`/groups/${groupId}/regenerate-code`);
 export const getGroupDetail = (groupId) => API.get(`/groups/${groupId}/detail`);
-export const getGroupActivities = (groupId) => API.get(`/groups/${groupId}/activities`); // ← NEW
-
-// ─────────────────────────────────────────────
-// TASKS
-// ─────────────────────────────────────────────
+export const getGroupActivities = (groupId) => API.get(`/groups/${groupId}/activities`);
 export const createGroupTask = (data) => API.post('/tasks/group', data);
 export const createPersonalTask = (data) => API.post('/tasks/personal', data);
 export const updateTaskStatus = (taskId, status) => API.patch(`/tasks/${taskId}/status`, { status });
@@ -54,19 +43,11 @@ export const getMyTasksByStatus = (status) => API.get(`/tasks/my/status/${status
 export const getGroupTasks = (groupId) => API.get(`/tasks/group/${groupId}`);
 export const getGroupTasksByStatus = (groupId, status) => API.get(`/tasks/group/${groupId}/status/${status}`);
 export const claimTask = (taskId) => API.post(`/tasks/${taskId}/claim`);
-export const denyTask = (taskId) => API.post(`/tasks/${taskId}/deny`); // ← NEW
+export const denyTask = (taskId) => API.post(`/tasks/${taskId}/deny`);
 export const getTasksAssignedByMe = (groupId) => API.get(`/tasks/group/${groupId}/assigned-by-me`);
-
-// ─────────────────────────────────────────────
-// LOCATION
-// ─────────────────────────────────────────────
 export const updateLocation = (data) => API.post('/location/update', data);
 export const getGroupLocations = (groupId) => API.get(`/location/group/${groupId}`);
 export const getMyLocation = () => API.get('/location/me');
-
-// ─────────────────────────────────────────────
-// REWARDS
-// ─────────────────────────────────────────────
 export const getMyRewards = () => API.get('/rewards/my');
 export const getMyCoins = () => API.get('/rewards/my/coins');
 export const getGroupRewards = (groupId) => API.get(`/rewards/group/${groupId}`);
