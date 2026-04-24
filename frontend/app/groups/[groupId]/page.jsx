@@ -38,7 +38,7 @@ export default function GroupDetailPage() {
   const fetchGroup = async () => {
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get(`http://localhost:8080/api/groups/${groupId}/detail`, {
+      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/groups/${groupId}/detail`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setGroup(res.data);

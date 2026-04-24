@@ -37,7 +37,7 @@ export default function GroupTasksPage() {
       const token = localStorage.getItem('token');
       const [tasksRes, groupRes] = await Promise.all([
         view === 'ASSIGNED_BY_ME' ? getTasksAssignedByMe(groupId) : getGroupTasks(groupId),
-        axios.get(`http://localhost:8080/api/groups/${groupId}/detail`, {
+        axios.get(`${process.env.NEXT_PUBLIC_API_URL}/groups/${groupId}/detail`, {
           headers: { Authorization: `Bearer ${token}` }
         })
       ]);
