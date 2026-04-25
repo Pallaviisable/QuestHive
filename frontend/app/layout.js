@@ -88,7 +88,8 @@ export default function RootLayout({ children }) {
 
   return (
     <html lang="en">
-      <body style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', overflow: 'hidden' }}>
+      {/* FIX: removed overflow:hidden from body — it was blocking ALL page scrolling */}
+      <body style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
 
         {isNavigating && <PageLoader />}
 
@@ -193,10 +194,10 @@ export default function RootLayout({ children }) {
           </div>
         </nav>
 
-        {/* BODY */}
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden', height: 'calc(100vh - 60px)' }}>
+        {/* BODY: flex row, fills remaining height, overflow hidden so children control their own scroll */}
+        <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
 
-          {/* SIDEBAR — fixed, never moves. Only inner nav list scrolls if needed */}
+          {/* SIDEBAR — fixed height, never scrolls itself. Only inner nav scrolls if needed */}
           <aside style={{
             width: sidebarOpen ? '220px' : '0px',
             minWidth: sidebarOpen ? '220px' : '0px',
@@ -207,14 +208,14 @@ export default function RootLayout({ children }) {
             flexShrink: 0,
             display: 'flex',
             flexDirection: 'column',
-            /* sidebar itself does NOT scroll — it stays fixed */
           }}>
-            {/* Nav items — this inner div scrolls if items overflow */}
+            {/* Nav items — scrolls if items overflow */}
             <div style={{
               flex: 1,
               overflowY: 'auto',
               paddingTop: sidebarOpen ? '20px' : '0',
               overflowX: 'hidden',
+              minHeight: 0,
             }}>
               {navItems.map((item) => {
                 const active = pathname === item.href || pathname.startsWith(item.href + '/');
@@ -241,7 +242,7 @@ export default function RootLayout({ children }) {
               })}
             </div>
 
-            {/* User info pinned at bottom of sidebar — never scrolls away */}
+            {/* User info pinned at bottom of sidebar */}
             {sidebarOpen && (
               <div style={{ padding: '16px 20px 20px', flexShrink: 0 }}>
                 <div style={{
@@ -257,10 +258,14 @@ export default function RootLayout({ children }) {
             )}
           </aside>
 
-          {/* MAIN CONTENT — scrollable */}
+          {/* MAIN CONTENT — this is the only scrollable area */}
           <main style={{
-            flex: 1, padding: '28px 32px',
-            overflowY: 'auto',
+            flex: 1,
+            minHeight: 0,        
+            minWidth: 0,         
+            overflowY: 'auto',   /* vertical scroll */
+            overflowX: 'auto',   /* horizontal scroll */
+            padding: '28px 32px',
             animation: 'fadeSlideUp 0.35s ease forwards',
           }}>
             {children}
