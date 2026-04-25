@@ -20,6 +20,7 @@ export default function LoginPage() {
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
       localStorage.setItem('coins', res.data.user?.coins || 0);
+      localStorage.setItem('loginSuccess', 'true'); // triggers toast in layout
       document.cookie = `token=${res.data.token}; path=/; max-age=86400`;
       window.location.href = '/dashboard';
     } catch (err) {
@@ -32,30 +33,24 @@ export default function LoginPage() {
   return (
     <div style={{
       minHeight: '100vh', background: '#0f0f0f',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
     }}>
       <div className="animate-fadeSlideUp" style={{
         background: '#1a1a1a', borderRadius: '20px',
-        border: '1px solid #2a2a2a', padding: '48px',
+        border: '1px solid #2a2a2a', padding: '40px 36px',
         width: '100%', maxWidth: '420px',
       }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '8px' }}>🐝</div>
-          <h1 style={{ color: '#f5c518', fontSize: '28px', fontWeight: 800 }}>QuestHive</h1>
-          <p style={{ color: '#a0a0a0', marginTop: '4px' }}>Welcome back, hive member!</p>
+          <div style={{ fontSize: '44px', marginBottom: '8px' }}>🐝</div>
+          <h1 style={{ color: '#f5c518', fontSize: '26px', fontWeight: 800 }}>QuestHive</h1>
+          <p style={{ color: '#a0a0a0', marginTop: '4px', fontSize: '14px' }}>Welcome back, hive member!</p>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
             <label style={{ color: '#a0a0a0', fontSize: '13px', marginBottom: '6px', display: 'block' }}>Email</label>
-            <input
-              className="input"
-              type="email"
-              placeholder="you@example.com"
-              value={form.email}
-              onChange={e => setForm({ ...form, email: e.target.value })}
-              required
-            />
+            <input className="input" type="email" placeholder="you@example.com"
+              value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
           </div>
 
           <div>
@@ -68,18 +63,28 @@ export default function LoginPage() {
                 value={form.password}
                 onChange={e => setForm({ ...form, password: e.target.value })}
                 required
-                style={{ paddingRight: '44px', width: '100%', boxSizing: 'border-box' }}
+                style={{ paddingRight: '48px', width: '100%', boxSizing: 'border-box' }}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
+              {/* Eye icon: open eye = password hidden (click to show), slashed eye = password visible (click to hide) */}
+              <button type="button" onClick={() => setShowPassword(prev => !prev)}
                 style={{
                   position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-                  background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', padding: 0,
-                  color: '#a0a0a0', lineHeight: 1,
-                }}
-              >
-                {showPassword ? '🙈' : '👁️'}
+                  background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                  color: '#a0a0a0', display: 'flex', alignItems: 'center',
+                }}>
+                {showPassword ? (
+                  // Slashed eye — password is visible, click to hide
+                  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                ) : (
+                  // Open eye — password is hidden, click to show
+                  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
               </button>
             </div>
           </div>
@@ -91,23 +96,21 @@ export default function LoginPage() {
             }}>{error}</div>
           )}
 
-          <button
-            className="btn-primary"
-            type="submit"
-            disabled={loading}
-            style={{ width: '100%', justifyContent: 'center', marginTop: '8px' }}>
-            {loading ? '⏳ Logging in...' : '🚀 Login'}
+          <button className="btn-primary" type="submit" disabled={loading}
+            style={{ width: '100%', justifyContent: 'center', marginTop: '4px' }}>
+            {loading ? (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ width: '16px', height: '16px', border: '2px solid #000', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+                Logging in...
+              </span>
+            ) : 'Login →'}
           </button>
         </form>
 
         <div style={{ textAlign: 'center', marginTop: '24px', color: '#a0a0a0', fontSize: '14px' }}>
-          <Link href="/forgot-password" style={{ color: '#f5c518', textDecoration: 'none' }}>
-            Forgot password?
-          </Link>
+          <Link href="/forgot-password" style={{ color: '#f5c518', textDecoration: 'none' }}>Forgot password?</Link>
           <span style={{ margin: '0 12px' }}>•</span>
-          <Link href="/register" style={{ color: '#f5c518', textDecoration: 'none' }}>
-            Create account
-          </Link>
+          <Link href="/register" style={{ color: '#f5c518', textDecoration: 'none' }}>Create account</Link>
         </div>
       </div>
     </div>

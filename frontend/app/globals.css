@@ -127,3 +127,14 @@ body {
 .badge-orange { background: rgba(249,115,22,0.15); color: #f97316; }
 .badge-red    { background: rgba(239,68,68,0.15);  color: #ef4444; }
 .badge-gray   { background: rgba(160,160,160,0.15); color: #a0a0a0; }
+
+/* Page loader animation */
+@keyframes loaderSlide {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  main { padding: 16px !important; }
+}
