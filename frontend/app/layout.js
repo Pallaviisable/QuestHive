@@ -106,7 +106,7 @@ export default function RootLayout({ children }) {
           </div>
         )}
 
-        {/* TOP NAVBAR — sticky, never moves */}
+        {/* TOP NAVBAR */}
         <nav style={{
           position: 'sticky', top: 0, zIndex: 150,
           background: 'rgba(17,17,17,0.97)',
@@ -117,7 +117,7 @@ export default function RootLayout({ children }) {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           flexShrink: 0,
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {/* Animated Hamburger */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -127,6 +127,40 @@ export default function RootLayout({ children }) {
               <span style={{ display: 'block', width: '22px', height: '2px', background: '#fff', borderRadius: '2px', transition: 'all 0.3s', opacity: sidebarOpen ? 0 : 1 }} />
               <span style={{ display: 'block', width: '22px', height: '2px', background: '#fff', borderRadius: '2px', transition: 'all 0.3s', transform: sidebarOpen ? 'rotate(-45deg) translateY(-7px)' : 'none' }} />
             </button>
+
+            {/* Back / Forward buttons */}
+            <div style={{ display: 'flex', gap: '2px' }}>
+              <button
+                onClick={() => router.back()}
+                title="Go back"
+                style={{
+                  background: 'none', border: 'none', color: '#a0a0a0', cursor: 'pointer',
+                  padding: '6px 8px', borderRadius: '8px', display: 'flex', alignItems: 'center',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#fff'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#a0a0a0'; }}
+              >
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
+              </button>
+              <button
+                onClick={() => router.forward()}
+                title="Go forward"
+                style={{
+                  background: 'none', border: 'none', color: '#a0a0a0', cursor: 'pointer',
+                  padding: '6px 8px', borderRadius: '8px', display: 'flex', alignItems: 'center',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#fff'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#a0a0a0'; }}
+              >
+                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 18l6-6-6-6" />
+                </svg>
+              </button>
+            </div>
 
             <Link href="/dashboard" style={{ textDecoration: 'none' }}>
               <span style={{ fontSize: '20px', fontWeight: 800, color: '#f5c518' }}>🐝 QuestHive</span>
@@ -162,7 +196,7 @@ export default function RootLayout({ children }) {
         {/* BODY */}
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden', height: 'calc(100vh - 60px)' }}>
 
-          {/* SIDEBAR */}
+          {/* SIDEBAR — fixed, never moves. Only inner nav list scrolls if needed */}
           <aside style={{
             width: sidebarOpen ? '220px' : '0px',
             minWidth: sidebarOpen ? '220px' : '0px',
@@ -170,13 +204,18 @@ export default function RootLayout({ children }) {
             borderRight: '1px solid #2a2a2a',
             transition: 'all 0.3s ease',
             overflow: 'hidden',
-            paddingTop: sidebarOpen ? '20px' : '0',
             flexShrink: 0,
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'space-between',
+            /* sidebar itself does NOT scroll — it stays fixed */
           }}>
-            <div>
+            {/* Nav items — this inner div scrolls if items overflow */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              paddingTop: sidebarOpen ? '20px' : '0',
+              overflowX: 'hidden',
+            }}>
               {navItems.map((item) => {
                 const active = pathname === item.href || pathname.startsWith(item.href + '/');
                 return (
@@ -202,9 +241,9 @@ export default function RootLayout({ children }) {
               })}
             </div>
 
-            {/* User info at bottom of sidebar */}
+            {/* User info pinned at bottom of sidebar — never scrolls away */}
             {sidebarOpen && (
-              <div style={{ padding: '16px 20px 20px' }}>
+              <div style={{ padding: '16px 20px 20px', flexShrink: 0 }}>
                 <div style={{
                   padding: '12px', borderRadius: '12px',
                   background: 'rgba(245,197,24,0.05)', border: '1px solid #2a2a2a',
@@ -218,7 +257,7 @@ export default function RootLayout({ children }) {
             )}
           </aside>
 
-          {/* MAIN CONTENT — scrollable, not the whole page */}
+          {/* MAIN CONTENT — scrollable */}
           <main style={{
             flex: 1, padding: '28px 32px',
             overflowY: 'auto',
