@@ -93,7 +93,7 @@ export default function RegisterPage() {
               </div>
             ))}
 
-            {/* Password field with eye toggle */}
+            {/* Password field with SVG eye toggle — same convention as login */}
             <div>
               <label style={{ color: '#a0a0a0', fontSize: '13px', marginBottom: '6px', display: 'block' }}>
                 Password
@@ -106,18 +106,35 @@ export default function RegisterPage() {
                   value={form.password}
                   onChange={e => setForm({ ...form, password: e.target.value })}
                   required
-                  style={{ paddingRight: '44px', width: '100%', boxSizing: 'border-box' }}
+                  style={{ paddingRight: '48px', width: '100%', boxSizing: 'border-box' }}
                 />
+                {/*
+                  FIXED convention (same as login):
+                    showPassword=false → password HIDDEN  → slashed eye shown → click to reveal
+                    showPassword=true  → password VISIBLE → open eye shown   → click to hide
+                */}
                 <button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => setShowPassword(prev => !prev)}
                   style={{
                     position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-                    background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', padding: 0,
-                    color: '#a0a0a0', lineHeight: 1,
+                    background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                    color: '#a0a0a0', display: 'flex', alignItems: 'center',
                   }}
                 >
-                  {showPassword ? '🙈' : '👁️'}
+                  {showPassword ? (
+                    /* Password VISIBLE → open eye → click to hide */
+                    <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  ) : (
+                    /* Password HIDDEN → slashed eye → click to show */
+                    <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                  )}
                 </button>
               </div>
             </div>
@@ -131,7 +148,12 @@ export default function RegisterPage() {
 
             <button className="btn-primary" type="submit" disabled={loading}
               style={{ width: '100%', justifyContent: 'center', marginTop: '8px' }}>
-              {loading ? '⏳ Sending OTP...' : '🐝 Create Account'}
+              {loading ? (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ width: '16px', height: '16px', border: '2px solid #000', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+                  Sending OTP...
+                </span>
+              ) : '🐝 Create Account'}
             </button>
           </form>
         )}
@@ -171,7 +193,12 @@ export default function RegisterPage() {
 
             <button className="btn-primary" type="submit" disabled={loading}
               style={{ width: '100%', justifyContent: 'center' }}>
-              {loading ? '⏳ Verifying...' : '✅ Verify Email'}
+              {loading ? (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ width: '16px', height: '16px', border: '2px solid #000', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+                  Verifying...
+                </span>
+              ) : '✅ Verify Email'}
             </button>
 
             <button type="button" onClick={() => { setStep('register'); setError(''); setSuccess(''); }}
