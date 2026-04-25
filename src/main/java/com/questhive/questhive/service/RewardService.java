@@ -116,8 +116,11 @@ public class RewardService {
         }
         user.setCoins(user.getCoins() - option.getCoinsRequired());
         userRepository.save(user);
+        String title = (option.getTitle() != null && !option.getTitle().isBlank())
+                ? option.getTitle()
+                : "Unknown Option";
         saveReward(userId, option.getGroupId(), null, -option.getCoinsRequired(),
-                RewardType.TASK_COMPLETION, "Redeemed: " + option.getTitle());
+                RewardType.TASK_COMPLETION, "Redeemed: " + title);
         // ← NEW: log activity
         logActivity(option.getGroupId(), "REWARD_REDEEMED", user.getFullName(), null,
                 option.getTitle(), option.getCoinsRequired());
