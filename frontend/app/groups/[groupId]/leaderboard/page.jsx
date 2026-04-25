@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getLeaderboard, getGroup } from '@/lib/api';
+import { getLeaderboard, getGroupDetail } from '@/lib/api';
 
 export default function LeaderboardPage() {
   const { groupId } = useParams();
@@ -18,7 +18,7 @@ export default function LeaderboardPage() {
 
   const fetchData = async () => {
     try {
-      const [lbRes, groupRes] = await Promise.all([getLeaderboard(groupId), getGroup(groupId)]);
+      const [lbRes, groupRes] = await Promise.all([getLeaderboard(groupId), getGroupDetail(groupId)]);
       const entries = Object.entries(lbRes.data)
         .map(([userId, coins]) => ({ userId, coins }))
         .sort((a, b) => b.coins - a.coins);
