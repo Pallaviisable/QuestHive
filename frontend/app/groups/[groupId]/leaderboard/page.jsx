@@ -31,15 +31,19 @@ export default function LeaderboardPage() {
     }
   };
 
-  // Resolve userId → member name using group.members
+  // FIX: MongoDB returns _id not id — check both to be safe
   const getMemberName = (userId) => {
     if (!group?.members) return userId;
-    const member = group.members.find(m => m.id === userId);
+    const member = group.members.find(
+      m => (m._id === userId) || (m.id === userId) || (String(m._id) === String(userId))
+    );
     return member ? (member.fullName || member.username) : userId;
   };
 
   const getInitial = (userId) => {
     const name = getMemberName(userId);
+    // If name is still a raw ID (lookup failed), show '?' instead of first char of ID
+    if (name === userId && userId.length > 10) return '?';
     return name[0]?.toUpperCase() || '?';
   };
 
@@ -71,7 +75,7 @@ export default function LeaderboardPage() {
       ) : (
         <div style={{ maxWidth: '640px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {leaderboard.map((entry, i) => {
-            const isMe = entry.userId === user?.id;
+            const isMe = entry.userId === user?.id || entry.userId === user?._id;
             const name = isMe ? 'You' : getMemberName(entry.userId);
             const initial = getInitial(entry.userId);
             const isTop3 = i < 3;
