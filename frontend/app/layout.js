@@ -88,7 +88,7 @@ export default function RootLayout({ children }) {
 
   return (
     <html lang="en">
-      {/* FIX: removed overflow:hidden from body — it was blocking ALL page scrolling */}
+      {/*removed overflow:hidden from body — it was blocking ALL page scrolling */}
       <body style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
 
         {isNavigating && <PageLoader />}
