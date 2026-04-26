@@ -21,9 +21,7 @@ export default function GroupTasksPage() {
     priority: 'MEDIUM', category: 'WORK', deadline: '', bonusCoins: ''
   });
   const [editingTask, setEditingTask] = useState(null);
-  const [editForm, setEditForm] = useState({
-    title: '', description: '', priority: 'MEDIUM', category: 'WORK', deadline: ''
-  });
+  const [editForm, setEditForm] = useState({ title: '', description: '', priority: 'MEDIUM', category: 'WORK', deadline: '' });
   const [editError, setEditError] = useState('');
 
   useEffect(() => {
@@ -38,35 +36,22 @@ export default function GroupTasksPage() {
       const token = localStorage.getItem('token');
       const [tasksRes, groupRes] = await Promise.all([
         view === 'ASSIGNED_BY_ME' ? getTasksAssignedByMe(groupId) : getGroupTasks(groupId),
-        axios.get(`${process.env.NEXT_PUBLIC_API_URL}/groups/${groupId}/detail`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+        axios.get(`${process.env.NEXT_PUBLIC_API_URL}/groups/${groupId}/detail`, { headers: { Authorization: `Bearer ${token}` } })
       ]);
       setTasks(tasksRes.data);
       setGroup(groupRes.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
   const handleCreate = async (e) => {
-    e.preventDefault();
-    setError('');
+    e.preventDefault(); setError('');
     try {
-      await createGroupTask({
-        ...form, groupId,
-        assignedToId: form.assignedToId || null,
-        bonusCoins: form.bonusCoins ? parseInt(form.bonusCoins) : null,
-        deadline: form.deadline ? new Date(form.deadline).toISOString() : null,
-      });
+      await createGroupTask({ ...form, groupId, assignedToId: form.assignedToId || null, bonusCoins: form.bonusCoins ? parseInt(form.bonusCoins) : null, deadline: form.deadline ? new Date(form.deadline).toISOString() : null });
       setShowCreate(false);
       setForm({ assignedToId: '', title: '', description: '', priority: 'MEDIUM', category: 'WORK', deadline: '', bonusCoins: '' });
       fetchData();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create task.');
-    }
+    } catch (err) { setError(err.response?.data?.message || 'Failed to create task.'); }
   };
 
   const handleStatus = async (taskId, status) => {
@@ -82,28 +67,23 @@ export default function GroupTasksPage() {
   };
 
   const handleEdit = async (e) => {
-    e.preventDefault();
-    setEditError('');
+    e.preventDefault(); setEditError('');
     try {
-      await editTask(editingTask.id, {
-        ...editForm,
-        deadline: editForm.deadline ? new Date(editForm.deadline).toISOString() : null,
-      });
-      setEditingTask(null);
-      fetchData();
+      await editTask(editingTask.id, { ...editForm, deadline: editForm.deadline ? new Date(editForm.deadline).toISOString() : null });
+      setEditingTask(null); fetchData();
     } catch (err) { setEditError(err.response?.data?.message || 'Failed to update task.'); }
   };
 
   const openEditModal = (task) => {
-    setEditingTask(task);
-    setEditError('');
-    setEditForm({
-      title: task.title || '',
-      description: task.description || '',
-      priority: task.priority || 'MEDIUM',
-      category: task.category || 'WORK',
-      deadline: task.deadline ? new Date(task.deadline).toISOString().slice(0, 16) : '',
-    });
+    setEditingTask(task); setEditError('');
+    setEditForm({ title: task.title || '', description: task.description || '', priority: task.priority || 'MEDIUM', category: task.category || 'WORK', deadline: task.deadline ? new Date(task.deadline).toISOString().slice(0, 16) : '' });
+  };
+
+  // Fixed: handles both id and _id
+  const getMemberName = (userId) => {
+    if (!userId) return 'Unassigned';
+    const member = group?.members?.find(m => (m.id ?? m._id) === userId);
+    return member ? (member.fullName || member.username) : 'Unknown';
   };
 
   const filtered = filterStatus === 'ALL' ? tasks : tasks.filter(t => t.status === filterStatus);
@@ -111,15 +91,9 @@ export default function GroupTasksPage() {
   const statusColor   = { PENDING: '#a0a0a0', IN_PROGRESS: '#3b82f6', COMPLETED: '#22c55e' };
   const statusBg      = { PENDING: 'rgba(160,160,160,0.12)', IN_PROGRESS: 'rgba(59,130,246,0.12)', COMPLETED: 'rgba(34,197,94,0.12)' };
 
-  const getMemberName = (id) => {
-    const m = group?.members?.find(m => m.id === id);
-    return m ? (m.fullName || m.username) : 'Unknown';
-  };
-
-  // Stats bar
-  const total     = tasks.length;
-  const pending   = tasks.filter(t => t.status === 'PENDING').length;
-  const inProg    = tasks.filter(t => t.status === 'IN_PROGRESS').length;
+  const total = tasks.length;
+  const pending = tasks.filter(t => t.status === 'PENDING').length;
+  const inProg = tasks.filter(t => t.status === 'IN_PROGRESS').length;
   const completed = tasks.filter(t => t.status === 'COMPLETED').length;
   const openCount = tasks.filter(t => !t.assignedToId).length;
 
@@ -142,33 +116,29 @@ export default function GroupTasksPage() {
         <button className="btn-primary" onClick={() => setShowCreate(true)}>+ Assign Task</button>
       </div>
 
-      {/* Stats row */}
+      {/* Stats */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
         {[
-          { label: 'Total', value: total,     color: '#a0a0a0' },
-          { label: 'Pending',  value: pending,   color: '#a0a0a0' },
-          { label: 'In Progress', value: inProg,    color: '#3b82f6' },
+          { label: 'Total', value: total, color: '#a0a0a0' },
+          { label: 'Pending', value: pending, color: '#a0a0a0' },
+          { label: 'In Progress', value: inProg, color: '#3b82f6' },
           { label: 'Completed', value: completed, color: '#22c55e' },
-          { label: '🔓 Open',   value: openCount, color: '#f5c518' },
+          { label: '🔓 Open', value: openCount, color: '#f5c518' },
         ].map(s => (
-          <div key={s.label} style={{
-            background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '12px',
-            padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '80px',
-          }}>
+          <div key={s.label} style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '12px', padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '80px' }}>
             <span style={{ fontSize: '20px', fontWeight: 800, color: s.color }}>{s.value}</span>
             <span style={{ fontSize: '11px', color: '#555', fontWeight: 600 }}>{s.label}</span>
           </div>
         ))}
       </div>
 
-      {/* View toggle + Status filter (dropdown) in one row */}
+      {/* View toggle + Status filter */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
-        {/* View toggle pills */}
         <div style={{ display: 'flex', gap: '6px', background: '#1a1a1a', borderRadius: '12px', padding: '4px', border: '1px solid #2a2a2a' }}>
           {[
             { key: 'ASSIGNED_TO_ME', label: '📥 Mine' },
             { key: 'ASSIGNED_BY_ME', label: '📤 By Me' },
-            { key: 'ALL',            label: '👁️ All' },
+            { key: 'ALL', label: '👁️ All' },
           ].map(v => (
             <button key={v.key} onClick={() => setView(v.key)} style={{
               padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: 600,
@@ -178,26 +148,16 @@ export default function GroupTasksPage() {
             }}>{v.label}</button>
           ))}
         </div>
-
-        {/* Status filter — DROPDOWN instead of pills */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <label style={{ color: '#a0a0a0', fontSize: '12px', fontWeight: 600, whiteSpace: 'nowrap' }}>Status:</label>
-          <select
-            className="input"
-            value={filterStatus}
-            onChange={e => setFilterStatus(e.target.value)}
-            style={{ padding: '7px 12px', fontSize: '13px', minWidth: '150px', width: 'auto' }}
-          >
+          <select className="input" value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ padding: '7px 12px', fontSize: '13px', minWidth: '150px', width: 'auto' }}>
             <option value="ALL">All Statuses</option>
             <option value="PENDING">Pending</option>
             <option value="IN_PROGRESS">In Progress</option>
             <option value="COMPLETED">Completed</option>
           </select>
         </div>
-
-        <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#555' }}>
-          {filtered.length} of {tasks.length} tasks
-        </div>
+        <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#555' }}>{filtered.length} of {tasks.length} tasks</div>
       </div>
 
       {/* Task List */}
@@ -210,73 +170,39 @@ export default function GroupTasksPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {filtered.map((task, i) => {
-            const isOpenTask    = !task.assignedToId;
-            const isCreator     = task.assignedById === user?.id;
+            const isOpenTask = !task.assignedToId;
+            const isCreator = task.assignedById === user?.id;
             const isAssignedToMe = task.assignedToId === user?.id;
-
             return (
-              <div key={i} style={{
-                background: '#1a1a1a',
-                borderRadius: '16px',
-                border: isOpenTask
-                  ? '1px solid rgba(245,197,24,0.4)'
-                  : '1px solid #2a2a2a',
-                padding: '0',
-                overflow: 'hidden',
-                transition: 'all 0.2s',
-              }}>
-                {/* Open task top stripe */}
+              <div key={i} style={{ background: '#1a1a1a', borderRadius: '16px', border: isOpenTask ? '1px solid rgba(245,197,24,0.4)' : '1px solid #2a2a2a', padding: '0', overflow: 'hidden', transition: 'all 0.2s' }}>
                 {isOpenTask && (
-                  <div style={{
-                    background: 'linear-gradient(90deg, rgba(245,197,24,0.2), rgba(245,197,24,0.05))',
-                    padding: '6px 20px',
-                    display: 'flex', alignItems: 'center', gap: '8px',
-                    borderBottom: '1px solid rgba(245,197,24,0.2)',
-                  }}>
+                  <div style={{ background: 'linear-gradient(90deg, rgba(245,197,24,0.2), rgba(245,197,24,0.05))', padding: '6px 20px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid rgba(245,197,24,0.2)' }}>
                     <span style={{ fontSize: '14px' }}>🔓</span>
                     <span style={{ fontSize: '12px', fontWeight: 700, color: '#f5c518' }}>Open Task — Anyone can claim this!</span>
-                    {task.openTaskBonus && (
-                      <span style={{
-                        marginLeft: 'auto', background: 'rgba(34,197,94,0.15)',
-                        color: '#22c55e', borderRadius: '999px', padding: '2px 10px',
-                        fontSize: '11px', fontWeight: 700,
-                      }}>⭐ Bonus Coins</span>
-                    )}
+                    {task.openTaskBonus && <span style={{ marginLeft: 'auto', background: 'rgba(34,197,94,0.15)', color: '#22c55e', borderRadius: '999px', padding: '2px 10px', fontSize: '11px', fontWeight: 700 }}>⭐ Bonus Coins</span>}
                   </div>
                 )}
-
                 <div style={{ padding: '18px 20px', display: 'flex', alignItems: 'flex-start', gap: '16px', flexWrap: 'wrap' }}>
                   <div style={{ flex: 1, minWidth: '200px' }}>
-                    {/* Title + badges */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
                       <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#fff' }}>{task.title}</h3>
-                      <span style={{
-                        padding: '2px 9px', borderRadius: '999px', fontSize: '11px', fontWeight: 700,
-                        background: `${priorityColor[task.priority]}22`, color: priorityColor[task.priority],
-                      }}>{task.priority}</span>
-                      <span style={{
-                        padding: '2px 9px', borderRadius: '999px', fontSize: '11px', fontWeight: 700,
-                        background: statusBg[task.status], color: statusColor[task.status],
-                      }}>{task.status.replace('_', ' ')}</span>
+                      <span style={{ padding: '2px 9px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, background: `${priorityColor[task.priority]}22`, color: priorityColor[task.priority] }}>{task.priority}</span>
+                      <span style={{ padding: '2px 9px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, background: statusBg[task.status], color: statusColor[task.status] }}>{task.status.replace('_', ' ')}</span>
                     </div>
+                    {task.description && <p style={{ color: '#a0a0a0', fontSize: '13px', marginBottom: '10px', lineHeight: 1.5 }}>{task.description}</p>}
 
-                    {task.description && (
-                      <p style={{ color: '#a0a0a0', fontSize: '13px', marginBottom: '10px', lineHeight: 1.5 }}>{task.description}</p>
-                    )}
-
-                    {/* Meta info row */}
+                    {/* Meta row — FIX 3: styled Unassigned badge */}
                     <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#666', flexWrap: 'wrap', alignItems: 'center' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        👤
-                        {isOpenTask ? (
-                          <span style={{
-                            color: '#f5c518', fontWeight: 600,
-                            background: 'rgba(245,197,24,0.1)', borderRadius: '6px', padding: '1px 6px',
-                          }}>Unclaimed</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ color: '#555', fontSize: '12px' }}>👤</span>
+                        {task.assignedToId ? (
+                          <span style={{ color: '#a0a0a0', fontSize: '12px' }}>{getMemberName(task.assignedToId)}</span>
                         ) : (
-                          <span style={{ color: '#ccc' }}>{getMemberName(task.assignedToId)}</span>
+                          <span style={{ color: '#f5c518', fontSize: '12px', fontWeight: 600, background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.3)', borderRadius: '999px', padding: '2px 10px' }}>
+                            🔓 Unassigned
+                          </span>
                         )}
-                      </span>
+                      </div>
                       <span>📂 {task.category}</span>
                       {task.deadline && <span>⏰ {new Date(task.deadline).toLocaleDateString()}</span>}
                       <span style={{ color: '#f5c518', fontWeight: 700 }}>🪙 {task.coinsReward}</span>
@@ -286,39 +212,22 @@ export default function GroupTasksPage() {
                   {/* Action buttons */}
                   <div style={{ display: 'flex', gap: '8px', flexShrink: 0, flexWrap: 'wrap', alignItems: 'center' }}>
                     {isOpenTask && !isCreator && (
-                      <button className="btn-primary" style={{ fontSize: '12px', padding: '7px 14px' }}
-                        onClick={() => handleClaim(task.id)}>
-                        🙋 Claim
-                      </button>
+                      <button className="btn-primary" style={{ fontSize: '12px', padding: '7px 14px' }} onClick={() => handleClaim(task.id)}>🙋 Claim</button>
                     )}
                     {isAssignedToMe && task.status === 'PENDING' && (
-                      <button className="btn-outline" style={{ fontSize: '12px', padding: '7px 14px' }}
-                        onClick={() => handleStatus(task.id, 'IN_PROGRESS')}>Start</button>
+                      <button className="btn-outline" style={{ fontSize: '12px', padding: '7px 14px' }} onClick={() => handleStatus(task.id, 'IN_PROGRESS')}>Start</button>
                     )}
                     {isAssignedToMe && task.status === 'IN_PROGRESS' && (
-                      <button className="btn-primary" style={{ fontSize: '12px', padding: '7px 14px' }}
-                        onClick={() => handleStatus(task.id, 'COMPLETED')}>Done ✅</button>
+                      <button className="btn-primary" style={{ fontSize: '12px', padding: '7px 14px' }} onClick={() => handleStatus(task.id, 'COMPLETED')}>Done ✅</button>
                     )}
                     {isAssignedToMe && task.status !== 'COMPLETED' && !task.personal && (
-                      <button onClick={() => handleDeny(task.id)} style={{
-                        background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
-                        color: '#ef4444', borderRadius: '8px', padding: '7px 12px',
-                        fontSize: '12px', cursor: 'pointer',
-                      }}>❌ Deny</button>
+                      <button onClick={() => handleDeny(task.id)} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '8px', padding: '7px 12px', fontSize: '12px', cursor: 'pointer' }}>❌ Deny</button>
                     )}
                     {isCreator && task.status !== 'COMPLETED' && (
-                      <button onClick={() => openEditModal(task)} style={{
-                        background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)',
-                        color: '#3b82f6', borderRadius: '8px', padding: '7px 10px',
-                        fontSize: '14px', cursor: 'pointer',
-                      }}>✏️</button>
+                      <button onClick={() => openEditModal(task)} style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#3b82f6', borderRadius: '8px', padding: '7px 10px', fontSize: '14px', cursor: 'pointer' }}>✏️</button>
                     )}
                     {isCreator && task.status !== 'COMPLETED' && (
-                      <button onClick={() => deleteTask(task.id).then(fetchData)} style={{
-                        background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
-                        color: '#ef4444', borderRadius: '8px', padding: '7px 10px',
-                        fontSize: '14px', cursor: 'pointer',
-                      }}>🗑️</button>
+                      <button onClick={() => deleteTask(task.id).then(fetchData)} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '8px', padding: '7px 10px', fontSize: '14px', cursor: 'pointer' }}>🗑️</button>
                     )}
                   </div>
                 </div>
@@ -328,7 +237,7 @@ export default function GroupTasksPage() {
         </div>
       )}
 
-      {/* ── Assign Task Modal ── */}
+      {/* Assign Task Modal */}
       {showCreate && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '16px' }}>
           <div className="animate-fadeSlideUp" style={{ background: '#1a1a1a', borderRadius: '20px', border: '1px solid #2a2a2a', width: '100%', maxWidth: '500px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
@@ -350,7 +259,7 @@ export default function GroupTasksPage() {
                   <label style={{ color: '#a0a0a0', fontSize: '13px', display: 'block', marginBottom: '6px' }}>Assign To <span style={{ color: '#666' }}>(optional)</span></label>
                   <select className="input" value={form.assignedToId} onChange={e => setForm({ ...form, assignedToId: e.target.value })}>
                     <option value="">🔓 Open Task (anyone can claim)</option>
-                    {group?.members?.map(m => <option key={m.id} value={m.id}>{m.fullName} {m.id === group.adminId ? '(Admin)' : ''}</option>)}
+                    {group?.members?.map(m => <option key={m.id ?? m._id} value={m.id ?? m._id}>{m.fullName} {(m.id ?? m._id) === group.adminId ? '(Admin)' : ''}</option>)}
                   </select>
                 </div>
                 <div>
@@ -390,7 +299,7 @@ export default function GroupTasksPage() {
         </div>
       )}
 
-      {/* ── Edit Task Modal ── */}
+      {/* Edit Task Modal */}
       {editingTask && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '16px' }}>
           <div className="animate-fadeSlideUp" style={{ background: '#1a1a1a', borderRadius: '20px', border: '1px solid #2a2a2a', width: '100%', maxWidth: '500px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
