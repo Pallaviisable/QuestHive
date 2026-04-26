@@ -135,7 +135,7 @@ public class TaskService {
         return taskRepository.save(task);
     }
 
-    // ← NEW: deny a task
+    // deny a task
     public Task denyTask(String userId, String taskId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found."));
@@ -171,7 +171,7 @@ public class TaskService {
         return taskRepository.save(task);
     }
 
-    // ← NEW: open task 6hr/8hr notification flow (replaces auto-assign)
+    // open task 6hr/8hr notification flow (replaces auto-assign)
     public void processOpenTaskNotifications() {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime sixHoursAgo = now.minusHours(6);
