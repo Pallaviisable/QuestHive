@@ -166,21 +166,20 @@ export default function TasksPage() {
           </p>
         </div>
       ) : (
-        /* TABLE layout like reference UI */
         <div style={{ background: '#1a1a1a', borderRadius: '16px', border: '1px solid #2a2a2a', overflow: 'hidden' }}>
-          {/* Table header */}
+          {/* Table header — Assignee column removed */}
           <div style={{
-            display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 120px',
+            display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 120px',
             padding: '12px 20px', borderBottom: '1px solid #2a2a2a',
             fontSize: '11px', fontWeight: 700, color: '#555', textTransform: 'uppercase', letterSpacing: '0.6px',
           }}>
-            <span>Task</span><span>Priority</span><span>Status</span><span>Category</span><span>Assignee</span><span>Actions</span>
+            <span>Task</span><span>Priority</span><span>Status</span><span>Category</span><span>Actions</span>
           </div>
 
           {filtered.map((task, i) => (
             <div key={i}
               style={{
-                display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr 120px',
+                display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 120px',
                 padding: '14px 20px', borderBottom: i < filtered.length - 1 ? '1px solid #222' : 'none',
                 alignItems: 'center', transition: 'background 0.15s',
               }}
@@ -212,11 +211,6 @@ export default function TasksPage() {
 
               {/* Category */}
               <span style={{ fontSize: '12px', color: '#a0a0a0' }}>{task.category}</span>
-
-              {/* Assignee — "Unassigned" instead of "Unclaimed" */}
-              <span style={{ fontSize: '12px', color: task.assignedTo ? '#fff' : '#555', fontStyle: task.assignedTo ? 'normal' : 'italic' }}>
-                {task.assignedToName || task.assignedTo || 'Unassigned'}
-              </span>
 
               {/* Actions */}
               <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
