@@ -8,6 +8,7 @@ import com.questhive.questhive.service.TaskService;
 import com.questhive.questhive.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -197,5 +198,35 @@ public class TaskController {
             @RequestHeader("Authorization") String auth,
             @PathVariable String groupId) {
         return ResponseEntity.ok(taskService.getTasksAssignedByMe(extractUserId(auth), groupId));
+    }
+    @PatchMapping("/{taskId}/priority")
+    public ResponseEntity<?> updateTaskPriority(
+            @PathVariable String taskId,
+            @RequestBody Map<String, String> body) {
+        try {
+            String requesterId = SecurityContextHolder.getContext()
+                    .getAuthentication().getName();
+
+            String priorityStr = body.get("priority");
+            if (priorityStr == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Priority is required"));
+            }
+
+            Task.Priority newPriority;
+            try {
+                newPriority = Task.Priority.valueOf(priorityStr.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Priority must be LOW, MEDIUM, or HIGH"));
+            }
+
+            Task updated = taskService.updateTaskPriority(requesterId, taskId, newPriority);
+            return ResponseEntity.ok(updated);
+
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 }

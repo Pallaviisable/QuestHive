@@ -57,3 +57,4 @@ export const getRedeemOptions = (groupId) => API.get(`/rewards/group/${groupId}/
 export const redeemOption = (optionId) => API.post(`/rewards/redeem/${optionId}`);
 export const deleteRedeemOption = (optionId) => API.delete(`/rewards/redeem-options/${optionId}`);
 export const getRedeemHistory = (groupId) => API.get(`/rewards/group/${groupId}/redeem-history`);
+export const updateTaskPriority = (taskId, priority) => API.patch(`/tasks/${taskId}/priority`, { priority });
