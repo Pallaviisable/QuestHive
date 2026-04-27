@@ -14,7 +14,7 @@ export default function GroupTasksPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('ALL');
-  const [view, setView] = useState('ASSIGNED_TO_ME');
+  const [view, setView] = useState('ALL');
   const [error, setError] = useState('');
   const [form, setForm] = useState({
     assignedToId: '', title: '', description: '',
@@ -79,7 +79,6 @@ export default function GroupTasksPage() {
     setEditForm({ title: task.title || '', description: task.description || '', priority: task.priority || 'MEDIUM', category: task.category || 'WORK', deadline: task.deadline ? new Date(task.deadline).toISOString().slice(0, 16) : '' });
   };
 
-  // Fixed: handles both id and _id
   const getMemberName = (userId) => {
     if (!userId) return 'Unassigned';
     const member = group?.members?.find(m => (m.id ?? m._id) === userId);
@@ -136,7 +135,6 @@ export default function GroupTasksPage() {
       <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap', alignItems: 'center' }}>
         <div style={{ display: 'flex', gap: '6px', background: '#1a1a1a', borderRadius: '12px', padding: '4px', border: '1px solid #2a2a2a' }}>
           {[
-            { key: 'ASSIGNED_TO_ME', label: '📥 Mine' },
             { key: 'ASSIGNED_BY_ME', label: '📤 By Me' },
             { key: 'ALL', label: '👁️ All' },
           ].map(v => (
@@ -191,7 +189,6 @@ export default function GroupTasksPage() {
                     </div>
                     {task.description && <p style={{ color: '#a0a0a0', fontSize: '13px', marginBottom: '10px', lineHeight: 1.5 }}>{task.description}</p>}
 
-                    {/* Meta row — FIX 3: styled Unassigned badge */}
                     <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#666', flexWrap: 'wrap', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{ color: '#555', fontSize: '12px' }}>👤</span>
