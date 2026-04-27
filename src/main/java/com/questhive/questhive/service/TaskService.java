@@ -306,4 +306,49 @@ public class TaskService {
         activity.setCoins(coins);
         groupActivityRepository.save(activity);
     }
+
+    public Task updateTaskPriority(String requesterId, String taskId, Priority newPriority) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found"));
+
+        com.questhive.questhive.model.Group group = groupRepository.findById(task.getGroupId())
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+
+        // Only admin can change priority
+        if (!group.getAdminId().equals(requesterId)) {
+            throw new RuntimeException("Only the group admin can change task priority");
+        }
+
+        // Cannot change priority of completed tasks
+        if (task.getStatus() == Status.COMPLETED) {
+            throw new RuntimeException("Cannot change priority of a completed task");
+        }
+
+        Priority oldPriority = task.getPriority();
+
+        // Preserve bonus coins on top of old base
+        int oldBase = baseCoins(oldPriority);
+        int bonusCoins = Math.max(0, task.getCoinsReward() - oldBase);
+
+        // Set new priority and recalculate
+        task.setPriority(newPriority);
+        task.setCoinsReward(baseCoins(newPriority) + bonusCoins);
+
+        taskRepository.save(task);
+
+        // Log activity using existing logActivity helper
+        userRepository.findById(requesterId).ifPresent(requester ->
+                logActivity(
+                        task.getGroupId(),
+                        "PRIORITY_CHANGED",
+                        requester.getFullName(),
+                        null,
+                        "\"" + task.getTitle() + "\" priority changed from "
+                                + oldPriority.name() + " → " + newPriority.name(),
+                        0
+                )
+        );
+
+        return task;
+    }
 }
