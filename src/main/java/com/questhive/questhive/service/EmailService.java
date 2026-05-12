@@ -3,6 +3,7 @@ package com.questhive.questhive.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -11,6 +12,7 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
+    @Async
     public void sendOtp(String toEmail, String otp) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);
@@ -20,6 +22,7 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    @Async
     public void sendSignupOtp(String toEmail, String otp) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);
@@ -29,6 +32,7 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    @Async
     public void sendEmailChangeOtp(String toEmail, String otp) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);
@@ -38,6 +42,7 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    @Async
     public void sendTaskAssignedNotification(String toEmail, String assignerName,
                                              String taskTitle, String priority, String deadline) {
         SimpleMailMessage message = new SimpleMailMessage();
@@ -49,7 +54,7 @@ public class EmailService {
         mailSender.send(message);
     }
 
-    // ← NEW: open task 6-hour reminder
+    @Async
     public void sendOpenTaskReminder(String toEmail, String taskTitle, String groupName) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);
@@ -61,7 +66,7 @@ public class EmailService {
         mailSender.send(message);
     }
 
-    // ← NEW: open task 8-hour final warning
+    @Async
     public void sendOpenTaskFinalWarning(String toEmail, String taskTitle, String groupName) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);
@@ -74,6 +79,7 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    @Async
     public void sendDeadlineReminder(String toEmail, String taskTitle, String deadline) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);
@@ -83,6 +89,7 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    @Async
     public void sendRecurringTaskSuggestion(String toEmail, String taskTitle) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);
@@ -92,6 +99,7 @@ public class EmailService {
         mailSender.send(message);
     }
 
+    @Async
     public void sendGroupInvite(String toEmail, String groupName, String inviteCode) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);
