@@ -22,15 +22,21 @@ public class EmailService {
         mailSender.send(message);
     }
 
-    /*@Async
+    @Async
     public void sendSignupOtp(String toEmail, String otp) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(toEmail);
-        message.setSubject("QuestHive - Verify Your Email");
-        message.setText("Welcome to QuestHive! 🐝\n\nPlease verify your email using the OTP below:\n\n🔑 " + otp +
-                "\n\nThis OTP is valid for 10 minutes only.\n\nTeam QuestHive 🐝");
-        mailSender.send(message);
-    }*/
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(toEmail);
+            message.setSubject("QuestHive - Verify Your Email");
+            message.setText("Welcome to QuestHive! 🐝\n\nPlease verify your email using the OTP below:\n\n🔑 " + otp +
+                    "\n\nThis OTP is valid for 10 minutes only.\n\nTeam QuestHive 🐝");
+            mailSender.send(message);
+            System.out.println("EMAIL SUCCESS: OTP sent to " + toEmail);
+        } catch (Exception e) {
+            System.out.println("EMAIL FAILED: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
     @Async
     public void sendEmailChangeOtp(String toEmail, String otp) {
