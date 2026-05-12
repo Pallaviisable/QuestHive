@@ -22,7 +22,7 @@ public class EmailService {
         mailSender.send(message);
     }
 
-    @Async
+    /*@Async
     public void sendSignupOtp(String toEmail, String otp) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);
@@ -30,7 +30,7 @@ public class EmailService {
         message.setText("Welcome to QuestHive! 🐝\n\nPlease verify your email using the OTP below:\n\n🔑 " + otp +
                 "\n\nThis OTP is valid for 10 minutes only.\n\nTeam QuestHive 🐝");
         mailSender.send(message);
-    }
+    }*/
 
     @Async
     public void sendEmailChangeOtp(String toEmail, String otp) {
