@@ -176,3 +176,38 @@ export const deleteRedeemOption = (optionId) =>
 
 export const getRedeemHistory = (groupId) =>
   API.get(`/rewards/group/${groupId}/redeem-history`);
+// Invite APIs
+export const validateInvite = (token) =>
+  API.get(`/invite/validate/${token}`);
+
+export const registerWithInvite = (data) =>
+  API.post('/invite/register', data);
+
+// Admin access request
+export const requestAdminAccess = (data) =>
+  API.post('/superadmin/request-access', data);
+
+// Super Admin APIs
+export const getSuperAdminRequests = () =>
+  API.get('/superadmin/my-requests');
+
+export const getAllSuperAdminRequests = () =>
+  API.get('/superadmin/requests');
+
+export const approveAdminRequest = (requestId) =>
+  API.post(`/superadmin/approve/${requestId}`);
+
+export const rejectAdminRequest = (requestId) =>
+  API.post(`/superadmin/reject/${requestId}`);
+
+export const getSuperAdminUsers = () =>
+  API.get('/superadmin/users');
+
+export const deactivatePlatformUser = (userId) =>
+  API.patch(`/superadmin/users/${userId}/deactivate`);
+
+export const activatePlatformUser = (userId) =>
+  API.patch(`/superadmin/users/${userId}/activate`);
+
+export const removePlatformUser = (userId) =>
+  API.delete(`/superadmin/users/${userId}`);
