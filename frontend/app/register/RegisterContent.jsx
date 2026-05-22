@@ -1,17 +1,17 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import HCaptcha from '@hcaptcha/react-hcaptcha';
 import { validateInvite, registerWithInvite } from '@/lib/api';
 
 export default function RegisterContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const token = searchParams.get('token');
 
+  const [token, setToken] = useState('');
   const [invite, setInvite] = useState(null);
+
   const [form, setForm] = useState({
     fullName: '',
     username: '',
@@ -29,7 +29,12 @@ export default function RegisterContent() {
   const siteKey = process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY;
 
   useEffect(() => {
-    if (!token) {
+    const params = new URLSearchParams(window.location.search);
+    const inviteToken = params.get('token') || '';
+
+    setToken(inviteToken);
+
+    if (!inviteToken) {
       setError(
         'No invite token found. You need an invite link to register on QuestHive.'
       );
@@ -37,7 +42,7 @@ export default function RegisterContent() {
       return;
     }
 
-    validateInvite(token)
+    validateInvite(inviteToken)
       .then((res) => {
         if (res.data.alreadyRegistered) {
           router.push('/login');
@@ -54,7 +59,7 @@ export default function RegisterContent() {
         );
         setValidating(false);
       });
-  }, [token, router]);
+  }, [router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -248,48 +253,6 @@ export default function RegisterContent() {
                 }}
               />
             </div>
-
-            {[
-              {
-                key: 'fullName',
-                label: 'Full Name',
-                type: 'text',
-                placeholder: 'Your full name',
-              },
-              {
-                key: 'username',
-                label: 'Username',
-                type: 'text',
-                placeholder: 'Choose a username',
-              },
-            ].map((field) => (
-              <div key={field.key}>
-                <label
-                  style={{
-                    color: '#a0a0a0',
-                    fontSize: '13px',
-                    marginBottom: '6px',
-                    display: 'block',
-                  }}
-                >
-                  {field.label}
-                </label>
-
-                <input
-                  className="input"
-                  type={field.type}
-                  placeholder={field.placeholder}
-                  value={form[field.key]}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      [field.key]: e.target.value,
-                    })
-                  }
-                  required
-                />
-              </div>
-            ))}
 
             <button
               className="btn-primary"
