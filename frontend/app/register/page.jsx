@@ -18,7 +18,6 @@ function RegisterForm() {
   const [validating, setValidating] = useState(true);
   const [error, setError] = useState('');
   const captchaRef = useRef(null);
-
   const siteKey = process.env.NEXT_PUBLIC_HCAPTCHA_SITE_KEY;
 
   useEffect(() => {
