@@ -21,6 +21,11 @@ export default function LoginPage() {
       localStorage.setItem('user', JSON.stringify(res.data.user));
       localStorage.setItem('coins', res.data.user?.coins || 0);
       localStorage.setItem('loginSuccess', 'true');
+      
+      document.cookie = `token=${res.data.token}; path=/; max-age=86400`;
+      document.cookie = `role=${res.data.user?.role || 'MEMBER'}; path=/; max-age=86400`;
+
+
       document.cookie = `token=${res.data.token}; path=/; max-age=86400`;
       window.location.href = '/dashboard';
     } catch (err) {
@@ -109,7 +114,7 @@ export default function LoginPage() {
         <div style={{ textAlign: 'center', marginTop: '24px', color: '#a0a0a0', fontSize: '14px' }}>
           <Link href="/forgot-password" style={{ color: '#f5c518', textDecoration: 'none' }}>Forgot password?</Link>
           <span style={{ margin: '0 12px' }}>•</span>
-          <Link href="/register" style={{ color: '#f5c518', textDecoration: 'none' }}>Create account</Link>
+          <Link href="/request-access" style={{ color: '#f5c518', textDecoration: 'none' }}>Request access →</Link>
         </div>
       </div>
     </div>

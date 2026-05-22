@@ -93,4 +93,17 @@ public class TaskScheduler {
     public void processOpenTasks() {
         taskService.processOpenTaskNotifications();
     }
+    // Auto-delete unverified accounts older than 24 hours
+    @Scheduled(fixedRate = 3600000) // runs every hour
+    public void deleteUnverifiedAccounts() {
+        java.time.LocalDateTime cutoff = java.time.LocalDateTime.now().minusHours(24);
+        java.util.List<com.questhive.questhive.model.User> stale =
+                userRepository.findByIsVerifiedFalseAndCreatedAtBefore(cutoff);
+        stale.forEach(user -> {
+            if (!"SUPER_ADMIN".equals(user.getRole())) {
+                userRepository.delete(user);
+                System.out.println("🗑️ Auto-deleted unverified account: " + user.getEmail());
+            }
+        });
+    }
 }
