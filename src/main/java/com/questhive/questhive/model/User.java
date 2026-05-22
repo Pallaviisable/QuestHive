@@ -11,10 +11,13 @@ import java.time.LocalDateTime;
 public class User {
     @Id
     private String id;
+
     @Indexed(unique = true)
     private String username;
+
     @Indexed(unique = true)
     private String email;
+
     private String password;
     private String fullName;
     private String avatarColor;
@@ -28,11 +31,19 @@ public class User {
     private LocalDateTime otpExpiry;
     private String pendingEmail;
 
+    // Week 1 additions
+    private String role = "MEMBER";       // SUPER_ADMIN, FAMILY_ADMIN, MEMBER
+    private String status = "ACTIVE";     // ACTIVE, DEACTIVATED
+    private boolean hasSeenTour = false;
+
     public User() {
         this.coins = 0;
         this.streak = 0;
         this.createdAt = LocalDateTime.now();
         this.avatarColor = "#4CAF50";
         this.isVerified = false;
+        this.role = "MEMBER";
+        this.status = "ACTIVE";
+        this.hasSeenTour = false;
     }
 }

@@ -7,6 +7,7 @@ import com.questhive.questhive.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.Map;
 
 @RestController
@@ -22,15 +23,37 @@ public class AuthController {
         return jwtUtil.extractUserId(authHeader.substring(7));
     }
 
+    // ── NEW: invite-based registration ───────────────────────────────────────
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody Map<String, String> body) {
         try {
-            authService.register(body.get("fullName"), body.get("username"), body.get("email"), body.get("password"));
-            return ResponseEntity.ok(Map.of("message", "OTP sent to your email. Please verify."));
+            authService.register(
+                    body.get("fullName"),
+                    body.get("username"),
+                    body.get("email"),
+                    body.get("password"),
+                    body.get("inviteToken"),
+                    body.get("captchaToken")
+            );
+            return ResponseEntity.ok(Map.of("message",
+                    "Account created successfully! You can now login."));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
+
+    // ── Onboarding tour complete ──────────────────────────────────────────────
+    @PostMapping("/tour-complete")
+    public ResponseEntity<?> tourComplete(@RequestHeader("Authorization") String auth) {
+        try {
+            authService.completeTour(extractUserId(auth));
+            return ResponseEntity.ok(Map.of("message", "Tour marked complete."));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // ── All existing endpoints below — unchanged ──────────────────────────────
 
     @PostMapping("/verify-email")
     public ResponseEntity<?> verifyEmail(@RequestBody Map<String, String> body) {
@@ -47,7 +70,8 @@ public class AuthController {
         try {
             String email = body.get("email");
             String token = authService.login(email, body.get("password"));
-            User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
             return ResponseEntity.ok(Map.of("token", token, "user", user));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -74,20 +98,14 @@ public class AuthController {
         }
     }
 
-    // ← newUsername added
     @PutMapping("/profile")
     public ResponseEntity<?> updateProfile(
             @RequestHeader("Authorization") String auth,
             @RequestBody Map<String, String> body) {
         try {
-            String userId = extractUserId(auth);
             User updated = authService.updateProfile(
-                    userId,
-                    body.get("fullName"),
-                    body.get("newUsername"),
-                    body.get("newPassword"),
-                    body.get("currentPassword")
-            );
+                    extractUserId(auth), body.get("fullName"), body.get("newUsername"),
+                    body.get("newPassword"), body.get("currentPassword"));
             return ResponseEntity.ok(Map.of("message", "Profile updated successfully.", "user", updated));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -100,7 +118,7 @@ public class AuthController {
             @RequestBody Map<String, String> body) {
         try {
             authService.requestEmailChange(extractUserId(auth), body.get("newEmail"));
-            return ResponseEntity.ok(Map.of("message", "OTP sent to your new email. Please verify."));
+            return ResponseEntity.ok(Map.of("message", "OTP sent to your new email."));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }

@@ -139,4 +139,69 @@ public class EmailService {
                         + "Invite code: " + inviteCode + "\\n\\nOpen QuestHive, go to Join Group, and enter the code.\\n\\nSee you in the hive!"
         );
     }
+
+    @Async
+    public void sendMemberInviteLink(String toEmail, String groupName, String inviteLink) {
+        String subject = "You're invited to join " + groupName + " on QuestHive!";
+        String body = "Hi there!\n\n"
+                + "You've been invited to join the group \"" + groupName + "\" on QuestHive 🐝\n\n"
+                + "Click the link below to preview the group and create your account:\n"
+                + inviteLink + "\n\n"
+                + "This link expires in 48 hours and can only be used once.\n\n"
+                + "— The QuestHive Team";
+        sendEmail(toEmail, subject, body);
+    }
+
+    @Async
+    public void sendAdminRequestReceived(String toEmail, String fullName) {
+        String subject = "We received your QuestHive access request";
+        String body = "Hi " + fullName + ",\n\n"
+                + "Your request to become a Family Admin on QuestHive has been received.\n"
+                + "You'll get an email as soon as it's reviewed.\n\n"
+                + "— The QuestHive Team";
+        sendEmail(toEmail, subject, body);
+    }
+
+    @Async
+    public void sendAdminRequestApproved(String toEmail, String fullName, String registrationLink) {
+        String subject = "✅ Your QuestHive access has been approved!";
+        String body = "Hi " + fullName + ",\n\n"
+                + "Great news — your request to become a Family Admin on QuestHive has been approved!\n\n"
+                + "Click the link below to complete your registration:\n"
+                + registrationLink + "\n\n"
+                + "This link expires in 48 hours.\n\n"
+                + "— The QuestHive Team";
+        sendEmail(toEmail, subject, body);
+    }
+
+    @Async
+    public void sendAdminRequestRejected(String toEmail, String fullName) {
+        String subject = "Update on your QuestHive access request";
+        String body = "Hi " + fullName + ",\n\n"
+                + "After review, we're unable to approve your Family Admin request at this time.\n\n"
+                + "If you think this is a mistake, please reach out to us.\n\n"
+                + "— The QuestHive Team";
+        sendEmail(toEmail, subject, body);
+    }
+    @Async
+    public void sendAdminRequestNotification(String superAdminEmail, String requesterName,
+                                            String requesterEmail, String reason) {
+        String subject = "🐝 New Family Admin Request — " + requesterName;
+        String body = "New admin access request received:\n\n"
+                + "Name: " + requesterName + "\n"
+                + "Email: " + requesterEmail + "\n"
+                + "Reason: " + reason + "\n\n"
+                + "Login to the Super Admin dashboard to review.";
+        sendEmail(superAdminEmail, subject, body);
+    }
+    @Async
+    public void sendWelcomeEmail(String toEmail, String fullName) {
+        String subject = "Welcome to QuestHive! 🐝";
+        String body = "Hi " + fullName + "!\n\n"
+                + "Welcome to QuestHive. Your account is all set.\n\n"
+                + "Complete quests, earn coins, climb the leaderboard, and make your hive unstoppable.\n\n"
+                + "— The QuestHive Team";
+        sendEmail(toEmail, subject, body);
+    }
+    
 }

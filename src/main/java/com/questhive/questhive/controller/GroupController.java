@@ -29,15 +29,17 @@ public class GroupController {
             @RequestHeader("Authorization") String auth,
             @RequestBody Map<String, String> body) {
         String userId = extractUserId(auth);
-        return ResponseEntity.ok(groupService.createGroup(userId, body.get("name"), body.get("description")));
+        // template defaults to CUSTOM if not provided
+        String template = body.getOrDefault("template", "CUSTOM");
+        return ResponseEntity.ok(
+                groupService.createGroup(userId, body.get("name"), body.get("description"), template));
     }
 
     @PostMapping("/join")
     public ResponseEntity<Group> joinByInviteCode(
             @RequestHeader("Authorization") String auth,
             @RequestBody Map<String, String> body) {
-        String userId = extractUserId(auth);
-        return ResponseEntity.ok(groupService.joinByInviteCode(userId, body.get("inviteCode")));
+        return ResponseEntity.ok(groupService.joinByInviteCode(extractUserId(auth), body.get("inviteCode")));
     }
 
     @PostMapping("/{groupId}/invite-email")
@@ -45,9 +47,35 @@ public class GroupController {
             @RequestHeader("Authorization") String auth,
             @PathVariable String groupId,
             @RequestBody Map<String, String> body) {
-        String userId = extractUserId(auth);
-        groupService.inviteByEmail(userId, groupId, body.get("email"));
-        return ResponseEntity.ok(Map.of("message", "Invite sent successfully."));
+        groupService.inviteByEmail(extractUserId(auth), groupId, body.get("email"));
+        return ResponseEntity.ok(Map.of("message", "Invite link sent successfully."));
+    }
+
+    // NEW — deactivate / reactivate a member within this group
+    @PostMapping("/{groupId}/members/{memberId}/deactivate")
+    public ResponseEntity<?> deactivateMember(
+            @RequestHeader("Authorization") String auth,
+            @PathVariable String groupId,
+            @PathVariable String memberId) {
+        try {
+            groupService.deactivateMember(extractUserId(auth), groupId, memberId);
+            return ResponseEntity.ok(Map.of("message", "Member deactivated in this group."));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{groupId}/members/{memberId}/reactivate")
+    public ResponseEntity<?> reactivateMember(
+            @RequestHeader("Authorization") String auth,
+            @PathVariable String groupId,
+            @PathVariable String memberId) {
+        try {
+            groupService.reactivateMember(extractUserId(auth), groupId, memberId);
+            return ResponseEntity.ok(Map.of("message", "Member reactivated."));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     @GetMapping("/my")
@@ -56,56 +84,48 @@ public class GroupController {
     }
 
     @GetMapping("/{groupId}")
-    public ResponseEntity<Group> getGroup(
-            @RequestHeader("Authorization") String auth,
-            @PathVariable String groupId) {
+    public ResponseEntity<Group> getGroup(@RequestHeader("Authorization") String auth,
+                                          @PathVariable String groupId) {
         return ResponseEntity.ok(groupService.getGroupById(groupId));
     }
 
     @GetMapping("/{groupId}/detail")
-    public ResponseEntity<GroupDetailDTO> getGroupDetail(
-            @RequestHeader("Authorization") String auth,
-            @PathVariable String groupId) {
+    public ResponseEntity<GroupDetailDTO> getGroupDetail(@RequestHeader("Authorization") String auth,
+                                                          @PathVariable String groupId) {
         return ResponseEntity.ok(groupService.getGroupDetail(groupId));
     }
 
     @PostMapping("/{groupId}/leave")
-    public ResponseEntity<?> leaveGroup(
-            @RequestHeader("Authorization") String auth,
-            @PathVariable String groupId) {
+    public ResponseEntity<?> leaveGroup(@RequestHeader("Authorization") String auth,
+                                        @PathVariable String groupId) {
         groupService.leaveGroup(extractUserId(auth), groupId);
         return ResponseEntity.ok(Map.of("message", "Left group successfully."));
     }
 
     @DeleteMapping("/{groupId}/members/{memberId}")
-    public ResponseEntity<?> removeMember(
-            @RequestHeader("Authorization") String auth,
-            @PathVariable String groupId,
-            @PathVariable String memberId) {
+    public ResponseEntity<?> removeMember(@RequestHeader("Authorization") String auth,
+                                          @PathVariable String groupId,
+                                          @PathVariable String memberId) {
         groupService.removeMember(extractUserId(auth), groupId, memberId);
         return ResponseEntity.ok(Map.of("message", "Member removed."));
     }
 
     @DeleteMapping("/{groupId}")
-    public ResponseEntity<?> deleteGroup(
-            @RequestHeader("Authorization") String auth,
-            @PathVariable String groupId) {
+    public ResponseEntity<?> deleteGroup(@RequestHeader("Authorization") String auth,
+                                         @PathVariable String groupId) {
         groupService.deleteGroup(extractUserId(auth), groupId);
         return ResponseEntity.ok(Map.of("message", "Group deleted."));
     }
 
     @PostMapping("/{groupId}/regenerate-code")
-    public ResponseEntity<Group> regenerateCode(
-            @RequestHeader("Authorization") String auth,
-            @PathVariable String groupId) {
+    public ResponseEntity<Group> regenerateCode(@RequestHeader("Authorization") String auth,
+                                                 @PathVariable String groupId) {
         return ResponseEntity.ok(groupService.regenerateInviteCode(extractUserId(auth), groupId));
     }
 
-    // ← NEW: activity feed
     @GetMapping("/{groupId}/activities")
-    public ResponseEntity<List<GroupActivity>> getActivities(
-            @RequestHeader("Authorization") String auth,
-            @PathVariable String groupId) {
+    public ResponseEntity<List<GroupActivity>> getActivities(@RequestHeader("Authorization") String auth,
+                                                              @PathVariable String groupId) {
         return ResponseEntity.ok(groupService.getGroupActivities(groupId));
     }
 }
