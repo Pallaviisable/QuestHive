@@ -11,10 +11,5 @@ public interface UserRepository extends MongoRepository<User, String> {
     Optional<User> findByUsername(String username);
     boolean existsByEmail(String email);
     boolean existsByUsername(String username);
-
-    // NEW — auto-delete unverified accounts
     List<User> findByIsVerifiedFalseAndCreatedAtBefore(LocalDateTime cutoff);
-
-    // NEW — super admin user management
-    List<User> findByRole(String role);
 }

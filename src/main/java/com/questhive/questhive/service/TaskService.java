@@ -351,4 +351,59 @@ public class TaskService {
 
         return task;
     }
+
+    public Task getTask(String taskId) {
+        return taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found"));
+    }
+
+    public Task addComment(String taskId, String userId, String content) {
+        Task task = getTask(taskId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Task.TaskComment comment = new Task.TaskComment();
+        comment.setId(java.util.UUID.randomUUID().toString());
+        comment.setUserId(userId);
+        comment.setAuthorName(user.getFullName() != null ? user.getFullName() : user.getUsername());
+        comment.setContent(content);
+        comment.setCreatedAt(java.time.LocalDateTime.now());
+
+        task.getComments().add(comment);
+        return taskRepository.save(task);
+    }
+
+    public Task addSubtask(String taskId, String title) {
+        Task task = getTask(taskId);
+
+        Task.Subtask subtask = new Task.Subtask();
+        subtask.setId(java.util.UUID.randomUUID().toString());
+        subtask.setTitle(title);
+        subtask.setCompleted(false);
+
+        task.getSubtasks().add(subtask);
+        return taskRepository.save(task);
+    }
+
+    public Task completeSubtask(String taskId, String subtaskId) {
+        Task task = getTask(taskId);
+
+        task.getSubtasks().stream()
+                .filter(s -> subtaskId.equals(s.getId()))
+                .findFirst()
+                .ifPresent(s -> {
+                    s.setCompleted(true);
+                    s.setCompletedAt(java.time.LocalDateTime.now());
+                });
+
+        return taskRepository.save(task);
+    }
+
+    public Task addPledge(String taskId, String userId, String message) {
+        Task task = getTask(taskId);
+        task.setPledgeMessage(message);
+        task.setPledgedAt(java.time.LocalDateTime.now());
+        task.setPledgedByUserId(userId);
+        return taskRepository.save(task);
+    }
 }

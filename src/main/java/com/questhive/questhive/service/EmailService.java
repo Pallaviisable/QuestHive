@@ -204,4 +204,15 @@ public class EmailService {
         sendEmail(toEmail, subject, body);
     }
     
+
+    @Async
+    public void sendWeeklyDigest(String toEmail, String fullName, String groupName) {
+        String subject = "🐝 QuestHive Weekly Digest — " + groupName;
+        String body = "Hi " + fullName + ",\n\n"
+                + "Here's your weekly summary for " + groupName + ".\n\n"
+                + "Log in to QuestHive to see your full stats, coins earned, and the Quest Master winner!\n\n"
+                + "Keep up the great work in your hive! 🐝\n\n"
+                + "— The QuestHive Team";
+        sendEmail(toEmail, subject, body);
+    }
 }
