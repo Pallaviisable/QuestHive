@@ -3,6 +3,8 @@ package com.questhive.questhive.controller;
 import com.questhive.questhive.dto.GroupDetailDTO;
 import com.questhive.questhive.model.Group;
 import com.questhive.questhive.model.GroupActivity;
+import com.questhive.questhive.model.Task;
+import com.questhive.questhive.repository.TaskRepository;
 import com.questhive.questhive.service.GroupService;
 import com.questhive.questhive.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,7 @@ import java.util.Map;
 public class GroupController {
 
     private final GroupService groupService;
+    private final TaskRepository taskRepository;
     private final JwtUtil jwtUtil;
 
     private String extractUserId(String authHeader) {
@@ -127,5 +130,30 @@ public class GroupController {
     public ResponseEntity<List<GroupActivity>> getActivities(@RequestHeader("Authorization") String auth,
                                                               @PathVariable String groupId) {
         return ResponseEntity.ok(groupService.getGroupActivities(groupId));
+    }
+
+    @GetMapping("/{groupId}/health")
+    public ResponseEntity<?> getGroupHealth(@PathVariable String groupId) {
+        List<com.questhive.questhive.model.Task> tasks = taskRepository.findByGroupId(groupId);
+        long total = tasks.size();
+        long completed = tasks.stream()
+                .filter(t -> t.getStatus() == com.questhive.questhive.model.Task.Status.COMPLETED)
+                .count();
+        long overdue = tasks.stream()
+                .filter(t -> t.getStatus() != com.questhive.questhive.model.Task.Status.COMPLETED
+                        && t.getDeadline() != null
+                        && t.getDeadline().isBefore(java.time.LocalDateTime.now()))
+                .count();
+
+        int healthPercent = total == 0 ? 100 : (int) ((completed * 100.0) / total);
+        String status = healthPercent >= 75 ? "HEALTHY" : healthPercent >= 40 ? "AT_RISK" : "CRITICAL";
+
+        return ResponseEntity.ok(java.util.Map.of(
+                "total", total,
+                "completed", completed,
+                "overdue", overdue,
+                "healthPercent", healthPercent,
+                "status", status
+        ));
     }
 }

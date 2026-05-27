@@ -4,210 +4,118 @@ const API = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api',
 });
 
-/* ---------------- AUTH TOKEN HELPER ---------------- */
-
 const getToken = () => {
   if (typeof window === 'undefined') return null;
-
-  // First try localStorage
   let token = localStorage.getItem('token');
-
-  // Fallback to cookie
   if (!token) {
     const match = document.cookie.match(/(^| )token=([^;]+)/);
     token = match?.[2];
   }
-
   return token;
 };
 
-/* ---------------- REQUEST INTERCEPTOR ---------------- */
-
 API.interceptors.request.use((config) => {
   const token = getToken();
-
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-/* ---------------- AUTH ---------------- */
-
-export const register = (data) => API.post('/auth/register', data);
+/* AUTH */
 export const login = (data) => API.post('/auth/login', data);
-export const forgotPassword = (email) =>
-  API.post('/auth/forgot-password', { email });
+export const forgotPassword = (email) => API.post('/auth/forgot-password', { email });
+export const resetPassword = (data) => API.post('/auth/reset-password', data);
+export const verifyEmail = (data) => API.post('/auth/verify-email', data);
+export const updateProfile = (data) => API.put('/auth/profile', data);
+export const deleteAccount = (data) => API.delete('/auth/account', { data });
+export const requestEmailChange = (data) => API.post('/auth/email-change/request', data);
+export const confirmEmailChange = (data) => API.post('/auth/email-change/confirm', data);
+export const completeTour = () => API.post('/auth/tour-complete');
 
-export const resetPassword = (data) =>
-  API.post('/auth/reset-password', data);
+/* INVITE & REGISTRATION */
+export const validateInvite = (token) => API.get(`/invite/validate?token=${token}`);
+export const registerWithInvite = (data) => API.post('/auth/register', data);
+export const requestAdminAccess = (data) => API.post('/invite/request-access', data);
 
-export const verifyEmail = (data) =>
-  API.post('/auth/verify-email', data);
+/* GROUPS */
+export const createGroup = (data) => API.post('/groups/create', data);
+export const joinGroup = (inviteCode) => API.post('/groups/join', { inviteCode });
+export const getMyGroups = () => API.get('/groups/my');
+export const getGroup = (groupId) => API.get(`/groups/${groupId}`);
+export const getGroupDetail = (groupId) => API.get(`/groups/${groupId}/detail`);
+export const inviteByEmail = (groupId, email) => API.post(`/groups/${groupId}/invite-email`, { email });
+export const leaveGroup = (groupId) => API.post(`/groups/${groupId}/leave`);
+export const removeMember = (groupId, memberId) => API.delete(`/groups/${groupId}/members/${memberId}`);
+export const deactivateMember = (groupId, memberId) => API.post(`/groups/${groupId}/members/${memberId}/deactivate`);
+export const reactivateMember = (groupId, memberId) => API.post(`/groups/${groupId}/members/${memberId}/reactivate`);
+export const deleteGroup = (groupId) => API.delete(`/groups/${groupId}`);
+export const regenerateCode = (groupId) => API.post(`/groups/${groupId}/regenerate-code`);
+export const getGroupActivities = (groupId) => API.get(`/groups/${groupId}/activities`);
 
-export const updateProfile = (data) =>
-  API.put('/auth/profile', data);
+/* TASKS */
+export const createGroupTask = (data) => API.post('/tasks/group', data);
+export const createPersonalTask = (data) => API.post('/tasks/personal', data);
+export const updateTaskStatus = (taskId, status) => API.patch(`/tasks/${taskId}/status`, { status });
+export const editTask = (taskId, data) => API.put(`/tasks/${taskId}`, data);
+export const deleteTask = (taskId) => API.delete(`/tasks/${taskId}`);
+export const getMyTasks = () => API.get('/tasks/my');
+export const getMyPersonalTasks = () => API.get('/tasks/my/personal');
+export const getMyTasksByStatus = (status) => API.get(`/tasks/my/status/${status}`);
+export const getGroupTasks = (groupId) => API.get(`/tasks/group/${groupId}`);
+export const getGroupTasksByStatus = (groupId, status) => API.get(`/tasks/group/${groupId}/status/${status}`);
+export const claimTask = (taskId) => API.post(`/tasks/${taskId}/claim`);
+export const denyTask = (taskId) => API.post(`/tasks/${taskId}/deny`);
+export const getTasksAssignedByMe = (groupId) => API.get(`/tasks/group/${groupId}/assigned-by-me`);
+export const updateTaskPriority = (taskId, priority) => API.patch(`/tasks/${taskId}/priority`, { priority });
 
-export const deleteAccount = (data) =>
-  API.delete('/auth/account', { data });
+/* LOCATION */
+export const updateLocation = (data) => API.post('/location/update', data);
+export const getGroupLocations = (groupId) => API.get(`/location/group/${groupId}`);
+export const getMyLocation = () => API.get('/location/me');
 
-export const requestEmailChange = (data) =>
-  API.post('/auth/email-change/request', data);
+/* REWARDS */
+export const getMyRewards = () => API.get('/rewards/my');
+export const getMyCoins = () => API.get('/rewards/my/coins');
+export const getGroupRewards = (groupId) => API.get(`/rewards/group/${groupId}`);
+export const getLeaderboard = (groupId) => API.get(`/rewards/group/${groupId}/leaderboard`);
+export const createRedeemOption = (groupId, data) => API.post(`/rewards/group/${groupId}/redeem-options`, data);
+export const getRedeemOptions = (groupId) => API.get(`/rewards/group/${groupId}/redeem-options`);
+export const redeemOption = (optionId) => API.post(`/rewards/redeem/${optionId}`);
+export const deleteRedeemOption = (optionId) => API.delete(`/rewards/redeem-options/${optionId}`);
+export const getRedeemHistory = (groupId) => API.get(`/rewards/group/${groupId}/redeem-history`);
 
-export const confirmEmailChange = (data) =>
-  API.post('/auth/email-change/confirm', data);
+/* SUPER ADMIN */
+export const getSuperAdminRequests = () => API.get('/superadmin/requests');
+export const getAllSuperAdminRequests = () => API.get('/superadmin/requests/all');
+export const approveAdminRequest = (requestId) => API.post(`/superadmin/requests/${requestId}/approve`);
+export const rejectAdminRequest = (requestId) => API.post(`/superadmin/requests/${requestId}/reject`);
+export const getSuperAdminUsers = () => API.get('/superadmin/users');
+export const deactivatePlatformUser = (userId) => API.post(`/superadmin/users/${userId}/deactivate`);
+export const activatePlatformUser = (userId) => API.post(`/superadmin/users/${userId}/activate`);
+export const removePlatformUser = (userId) => API.delete(`/superadmin/users/${userId}`);
 
-/* ---------------- GROUPS ---------------- */
+/* XP & ANALYTICS */
+export const getMyXP = () => API.get('/xp/me');
+export const getGroupAnalytics = (groupId) => API.get(`/analytics/group/${groupId}`);
+export const logAnalyticsEvent = (data) => API.post('/analytics/event', data);
 
-export const createGroup = (data) =>
-  API.post('/groups/create', data);
+/* FEEDBACK */
+export const submitFeedback = (data) => API.post('/feedback', data);
 
-export const joinGroup = (inviteCode) =>
-  API.post('/groups/join', { inviteCode });
+/* CHAT */
+export const getChatMessages = (groupId) => API.get(`/chat/${groupId}/messages`);
 
-export const getMyGroups = () =>
-  API.get('/groups/my');
+/* TASK EXTRAS */
+export const addTaskComment = (taskId, data) => API.post(`/tasks/${taskId}/comments`, data);
+export const getTaskComments = (taskId) => API.get(`/tasks/${taskId}/comments`);
+export const addSubtask = (taskId, data) => API.post(`/tasks/${taskId}/subtasks`, data);
+export const completeSubtask = (taskId, subtaskId) => API.patch(`/tasks/${taskId}/subtasks/${subtaskId}/complete`);
+export const addCommitmentPledge = (taskId, data) => API.post(`/tasks/${taskId}/pledge`, data);
 
-export const getGroup = (groupId) =>
-  API.get(`/groups/${groupId}`);
+/* FAIRNESS */
+export const getFairnessReport = (groupId) => API.get(`/fairness/${groupId}`);
 
-export const getGroupDetail = (groupId) =>
-  API.get(`/groups/${groupId}/detail`);
+/* HEALTH BAR */
+export const getGroupHealth = (groupId) => API.get(`/groups/${groupId}/health`);
 
-export const inviteByEmail = (groupId, email) =>
-  API.post(`/groups/${groupId}/invite-email`, { email });
-
-export const leaveGroup = (groupId) =>
-  API.post(`/groups/${groupId}/leave`);
-
-export const removeMember = (groupId, memberId) =>
-  API.delete(`/groups/${groupId}/members/${memberId}`);
-
-export const deleteGroup = (groupId) =>
-  API.delete(`/groups/${groupId}`);
-
-export const regenerateCode = (groupId) =>
-  API.post(`/groups/${groupId}/regenerate-code`);
-
-export const getGroupActivities = (groupId) =>
-  API.get(`/groups/${groupId}/activities`);
-
-/* ---------------- TASKS ---------------- */
-
-export const createGroupTask = (data) =>
-  API.post('/tasks/group', data);
-
-export const createPersonalTask = (data) =>
-  API.post('/tasks/personal', data);
-
-export const updateTaskStatus = (taskId, status) =>
-  API.patch(`/tasks/${taskId}/status`, { status });
-
-export const editTask = (taskId, data) =>
-  API.put(`/tasks/${taskId}`, data);
-
-export const deleteTask = (taskId) =>
-  API.delete(`/tasks/${taskId}`);
-
-export const getMyTasks = () =>
-  API.get('/tasks/my');
-
-export const getMyPersonalTasks = () =>
-  API.get('/tasks/my/personal');
-
-export const getMyTasksByStatus = (status) =>
-  API.get(`/tasks/my/status/${status}`);
-
-export const getGroupTasks = (groupId) =>
-  API.get(`/tasks/group/${groupId}`);
-
-export const getGroupTasksByStatus = (groupId, status) =>
-  API.get(`/tasks/group/${groupId}/status/${status}`);
-
-export const claimTask = (taskId) =>
-  API.post(`/tasks/${taskId}/claim`);
-
-export const denyTask = (taskId) =>
-  API.post(`/tasks/${taskId}/deny`);
-
-export const getTasksAssignedByMe = (groupId) =>
-  API.get(`/tasks/group/${groupId}/assigned-by-me`);
-
-export const updateTaskPriority = (taskId, priority) =>
-  API.patch(`/tasks/${taskId}/priority`, { priority });
-
-/* ---------------- LOCATION ---------------- */
-
-export const updateLocation = (data) =>
-  API.post('/location/update', data);
-
-export const getGroupLocations = (groupId) =>
-  API.get(`/location/group/${groupId}`);
-
-export const getMyLocation = () =>
-  API.get('/location/me');
-
-/* ---------------- REWARDS ---------------- */
-
-export const getMyRewards = () =>
-  API.get('/rewards/my');
-
-export const getMyCoins = () =>
-  API.get('/rewards/my/coins');
-
-export const getGroupRewards = (groupId) =>
-  API.get(`/rewards/group/${groupId}`);
-
-export const getLeaderboard = (groupId) =>
-  API.get(`/rewards/group/${groupId}/leaderboard`);
-
-export const createRedeemOption = (groupId, data) =>
-  API.post(`/rewards/group/${groupId}/redeem-options`, data);
-
-export const getRedeemOptions = (groupId) =>
-  API.get(`/rewards/group/${groupId}/redeem-options`);
-
-export const redeemOption = (optionId) =>
-  API.post(`/rewards/redeem/${optionId}`);
-
-export const deleteRedeemOption = (optionId) =>
-  API.delete(`/rewards/redeem-options/${optionId}`);
-
-export const getRedeemHistory = (groupId) =>
-  API.get(`/rewards/group/${groupId}/redeem-history`);
-// Invite APIs
-export const validateInvite = (token) =>
-  API.get(`/invite/validate/${token}`);
-
-export const registerWithInvite = (data) =>
-  API.post('/invite/register', data);
-
-// Admin access request
-export const requestAdminAccess = (data) =>
-  API.post('/superadmin/request-access', data);
-
-// Super Admin APIs
-export const getSuperAdminRequests = () =>
-  API.get('/superadmin/my-requests');
-
-export const getAllSuperAdminRequests = () =>
-  API.get('/superadmin/requests');
-
-export const approveAdminRequest = (requestId) =>
-  API.post(`/superadmin/approve/${requestId}`);
-
-export const rejectAdminRequest = (requestId) =>
-  API.post(`/superadmin/reject/${requestId}`);
-
-export const getSuperAdminUsers = () =>
-  API.get('/superadmin/users');
-
-export const deactivatePlatformUser = (userId) =>
-  API.patch(`/superadmin/users/${userId}/deactivate`);
-
-export const activatePlatformUser = (userId) =>
-  API.patch(`/superadmin/users/${userId}/activate`);
-
-export const removePlatformUser = (userId) =>
-  API.delete(`/superadmin/users/${userId}`);
+/* PWA */
+export const subscribePush = (data) => API.post('/push/subscribe', data);

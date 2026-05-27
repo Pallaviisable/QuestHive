@@ -229,4 +229,56 @@ public class TaskController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
+
+    // ── COMMENTS ──────────────────────────────────────────────────────────
+    @PostMapping("/{taskId}/comments")
+    public ResponseEntity<?> addComment(
+            @PathVariable String taskId,
+            @RequestHeader("Authorization") String auth,
+            @RequestBody Map<String, String> body) {
+        String userId = extractUserId(auth);
+        String content = body.get("content");
+        if (content == null || content.isBlank())
+            return ResponseEntity.badRequest().body(Map.of("error", "Comment cannot be empty"));
+        Task task = taskService.addComment(taskId, userId, content);
+        return ResponseEntity.ok(task);
+    }
+
+    @GetMapping("/{taskId}/comments")
+    public ResponseEntity<?> getComments(@PathVariable String taskId) {
+        Task task = taskService.getTask(taskId);
+        return ResponseEntity.ok(task.getComments());
+    }
+
+    // ── SUBTASKS ──────────────────────────────────────────────────────────
+    @PostMapping("/{taskId}/subtasks")
+    public ResponseEntity<?> addSubtask(
+            @PathVariable String taskId,
+            @RequestBody Map<String, String> body) {
+        String title = body.get("title");
+        if (title == null || title.isBlank())
+            return ResponseEntity.badRequest().body(Map.of("error", "Subtask title required"));
+        Task task = taskService.addSubtask(taskId, title);
+        return ResponseEntity.ok(task);
+    }
+
+    @PatchMapping("/{taskId}/subtasks/{subtaskId}/complete")
+    public ResponseEntity<?> completeSubtask(
+            @PathVariable String taskId,
+            @PathVariable String subtaskId) {
+        Task task = taskService.completeSubtask(taskId, subtaskId);
+        return ResponseEntity.ok(task);
+    }
+
+    // ── COMMITMENT PLEDGE ─────────────────────────────────────────────────
+    @PostMapping("/{taskId}/pledge")
+    public ResponseEntity<?> addPledge(
+            @PathVariable String taskId,
+            @RequestHeader("Authorization") String auth,
+            @RequestBody Map<String, String> body) {
+        String userId = extractUserId(auth);
+        String message = body.get("message");
+        Task task = taskService.addPledge(taskId, userId, message);
+        return ResponseEntity.ok(task);
+    }
 }
