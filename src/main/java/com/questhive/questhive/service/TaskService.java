@@ -25,6 +25,7 @@ public class TaskService {
     private final UserRepository userRepository;
     private final EmailService emailService;
     private final RewardService rewardService;
+    private final XpService xpService;
     private final GroupActivityRepository groupActivityRepository; // ← NEW
 
     public Task createGroupTask(String assignedById, String assignedToId, String groupId,
@@ -109,6 +110,14 @@ public class TaskService {
             task.setCompletedAt(LocalDateTime.now());
             if (task.getGroupId() != null) {
                 rewardService.handleTaskCompletion(userId, task);
+                // Award XP based on priority
+                int xpAmount = switch (task.getPriority()) {
+                    case HIGH   -> 50;
+                    case MEDIUM -> 25;
+                    default     -> 10;
+                };
+                xpService.awardXp(userId, task.getGroupId(), xpAmount,
+                        "Completed task: " + task.getTitle());
                 // ← Activity log
                 userRepository.findById(userId).ifPresent(user ->
                         logActivity(task.getGroupId(), "TASK_COMPLETED", user.getFullName(), null, task.getTitle(), task.getCoinsReward()));
