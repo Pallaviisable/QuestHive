@@ -24,6 +24,26 @@ function XpBar({ xp }) {
         }} />
       </div>
       <div style={{ marginTop: '6px', fontSize: '11px', color: '#444' }}>Total XP: {xp.totalXp}</div>
+      {xp.frame && xp.frame !== 'NONE' && (
+        <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{
+            padding: '4px 12px', borderRadius: '999px', fontSize: '11px', fontWeight: 700,
+            background: xp.frame === 'LEGENDARY' ? 'rgba(245,197,24,0.2)' :
+                        xp.frame === 'CHAMPION' ? 'rgba(168,85,247,0.2)' :
+                        xp.frame === 'ELITE' ? 'rgba(59,130,246,0.2)' : 'rgba(34,197,94,0.2)',
+            color: xp.frame === 'LEGENDARY' ? '#f5c518' :
+                   xp.frame === 'CHAMPION' ? '#a855f7' :
+                   xp.frame === 'ELITE' ? '#3b82f6' : '#22c55e',
+            border: '1px solid currentColor',
+          }}>
+            {xp.frame === 'LEGENDARY' ? '👑 LEGENDARY FRAME' :
+             xp.frame === 'CHAMPION' ? '🏆 CHAMPION FRAME' :
+             xp.frame === 'ELITE' ? '⚔️ ELITE FRAME' :
+             xp.frame === 'VETERAN' ? '🛡️ VETERAN FRAME' :
+             xp.frame === 'DEDICATED' ? '💪 DEDICATED FRAME' : '🌱 RISING FRAME'}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

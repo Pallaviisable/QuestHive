@@ -120,3 +120,12 @@ export const getGroupHealth = (groupId) => API.get(`/groups/${groupId}/health`);
 
 /* PWA */
 export const subscribePush = (data) => API.post('/push/subscribe', data);
+
+/* ANALYTICS */
+export const getPlatformAnalytics = () => API.get('/analytics/platform');
+
+/* PEER REVIEW */
+export const requestBonusReview = (taskId, bonusCoins) => API.post(`/fairness/tasks/${taskId}/bonus-review`, { bonusCoins });
+export const flagBonus = (taskId) => API.post(`/fairness/tasks/${taskId}/flag-bonus`);
+export const getReviewStatus = (taskId) => API.get(`/fairness/tasks/${taskId}/review-status`);
+
