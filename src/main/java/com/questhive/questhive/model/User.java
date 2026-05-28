@@ -21,6 +21,8 @@ public class User {
     private String password;
     private String fullName;
     private String avatarColor;
+    private String avatarFrame = "NONE";
+    private String titleBadge = "Hive Newcomer";
     private int coins;
     private int streak;
     private boolean isVerified = false;

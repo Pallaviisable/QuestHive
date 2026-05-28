@@ -35,6 +35,13 @@ public class Task {
     // Comments
     private List<TaskComment> comments = new ArrayList<>();
 
+    // Peer review on high bonus coins
+    private boolean pendingPeerReview = false;
+    private int bonusCoinsAmount = 0;
+    private LocalDateTime peerReviewDeadline;
+    private List<String> bonusFlaggedByUserIds = new ArrayList<>();
+    private boolean bonusDisputed = false;
+
     // Commitment pledge
     private String pledgeMessage;
     private LocalDateTime pledgedAt;
