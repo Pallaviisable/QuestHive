@@ -8,6 +8,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -42,6 +43,20 @@ public class SecurityConfig {
     @Bean
     public JwtAuthFilter jwtAuthFilter(JwtUtil jwtUtil, UserRepository userRepository) {
         return new JwtAuthFilter(jwtUtil, userRepository);
+    }
+
+    @Bean
+    public FilterRegistrationBean<JwtAuthFilter> jwtFilterRegistration(JwtAuthFilter filter) {
+        FilterRegistrationBean<JwtAuthFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
+    public FilterRegistrationBean<RateLimitFilter> rateLimitFilterRegistration(RateLimitFilter filter) {
+        FilterRegistrationBean<RateLimitFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
     }
 
     @Bean
@@ -110,10 +125,7 @@ public class SecurityConfig {
                 if (jwtUtil.isTokenValid(token)) {
                     String userId = jwtUtil.extractUserId(token);
                     userRepository.findById(userId).ifPresent(user -> {
-                        // Block deactivated users
-                        if ("DEACTIVATED".equals(user.getStatus())) {
-                            return;
-                        }
+                        if ("DEACTIVATED".equals(user.getStatus())) return;
                         String role = user.getRole() != null ? user.getRole() : "MEMBER";
                         List<SimpleGrantedAuthority> authorities =
                                 List.of(new SimpleGrantedAuthority("ROLE_" + role));
