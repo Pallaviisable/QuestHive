@@ -153,4 +153,66 @@ public class FairnessService {
         result.put("periodDays", 14);
         return result;
     }
+
+
+    public Map<String, Object> requestBonusReview(String taskId, String requestedByUserId, int bonusCoins) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found"));
+
+        int PEER_REVIEW_THRESHOLD = 50;
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+
+        if (bonusCoins >= PEER_REVIEW_THRESHOLD) {
+            task.setPendingPeerReview(true);
+            task.setBonusCoinsAmount(bonusCoins);
+            task.setPeerReviewDeadline(java.time.LocalDateTime.now().plusHours(24));
+            taskRepository.save(task);
+            result.put("peerReviewRequired", true);
+            result.put("message", "Bonus of " + bonusCoins + " coins requires 24-hour peer review window.");
+            result.put("deadline", task.getPeerReviewDeadline());
+        } else {
+            result.put("peerReviewRequired", false);
+            result.put("message", "Bonus approved — below peer review threshold.");
+        }
+        return result;
+    }
+
+    public Map<String, Object> flagBonus(String taskId, String flaggedByUserId) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found"));
+
+        if (!task.isPendingPeerReview()) {
+            return Map.of("success", false, "message", "This task is not under peer review.");
+        }
+        if (task.getPeerReviewDeadline() != null &&
+                java.time.LocalDateTime.now().isAfter(task.getPeerReviewDeadline())) {
+            return Map.of("success", false, "message", "Peer review window has expired.");
+        }
+        if (!task.getBonusFlaggedByUserIds().contains(flaggedByUserId)) {
+            task.getBonusFlaggedByUserIds().add(flaggedByUserId);
+        }
+        // If 2+ flags → mark as disputed
+        if (task.getBonusFlaggedByUserIds().size() >= 2) {
+            task.setBonusDisputed(true);
+            task.setPendingPeerReview(false);
+        }
+        taskRepository.save(task);
+        return Map.of("success", true, "flags", task.getBonusFlaggedByUserIds().size(),
+                "disputed", task.isBonusDisputed(),
+                "message", task.isBonusDisputed() ?
+                        "Bonus disputed by group members — admin review required." :
+                        "Flag recorded. " + task.getBonusFlaggedByUserIds().size() + " flag(s) so far.");
+    }
+
+    public Map<String, Object> getReviewStatus(String taskId) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found"));
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("pendingPeerReview", task.isPendingPeerReview());
+        result.put("bonusCoinsAmount", task.getBonusCoinsAmount());
+        result.put("peerReviewDeadline", task.getPeerReviewDeadline());
+        result.put("flagCount", task.getBonusFlaggedByUserIds().size());
+        result.put("disputed", task.isBonusDisputed());
+        return result;
+    }
 }
