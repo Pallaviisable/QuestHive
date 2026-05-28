@@ -90,7 +90,7 @@ export default function SuperAdminPage() {
             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 6px #22c55e' }} />
             <span style={{ color: '#22c55e', fontSize: '12px', fontWeight: 600 }}>All systems operational</span>
           </div>
-          <button onClick={() => { localStorage.clear(); router.push('/login'); }} style={{
+          <button onClick={() => { localStorage.clear(); document.cookie = 'token=; path=/; max-age=0'; window.location.href = '/login'; }} style={{
             background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
             color: '#f87171', borderRadius: '10px', padding: '7px 16px',
             fontSize: '13px', fontWeight: 600, cursor: 'pointer',
