@@ -85,4 +85,72 @@ public class FairnessService {
         report.setSuggestion(suggestion);
         return report;
     }
+
+
+    public Map<String, Object> getConcentrationReport(String groupId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+
+        List<Task> recentTasks = taskRepository.findAll().stream()
+                .filter(t -> groupId.equals(t.getGroupId()))
+                .filter(t -> t.getCreatedAt() != null &&
+                        t.getCreatedAt().isAfter(java.time.LocalDateTime.now().minusDays(14)))
+                .collect(java.util.stream.Collectors.toList());
+
+        // assignerId -> assigneeId -> count
+        Map<String, Map<String, Integer>> matrix = new HashMap<>();
+        for (Task task : recentTasks) {
+            if (task.getAssignedById() == null || task.getAssignedToId() == null) continue;
+            matrix.computeIfAbsent(task.getAssignedById(), k -> new HashMap<>())
+                  .merge(task.getAssignedToId(), 1, Integer::sum);
+        }
+
+        List<String> alerts = new java.util.ArrayList<>();
+        Map<String, String> names = new HashMap<>();
+        for (String memberId : group.getMemberIds()) {
+            userRepository.findById(memberId).ifPresent(u ->
+                names.put(memberId, u.getFullName() != null ? u.getFullName() : u.getUsername()));
+        }
+
+        // Check 70% concentration rule
+        for (Map.Entry<String, Map<String, Integer>> adminEntry : matrix.entrySet()) {
+            String adminId = adminEntry.getKey();
+            Map<String, Integer> assignments = adminEntry.getValue();
+            int total = assignments.values().stream().mapToInt(i -> i).sum();
+            for (Map.Entry<String, Integer> assigneeEntry : assignments.entrySet()) {
+                double pct = total > 0 ? (assigneeEntry.getValue() * 100.0 / total) : 0;
+                if (pct >= 70) {
+                    String adminName = names.getOrDefault(adminId, "Admin");
+                    String assigneeName = names.getOrDefault(assigneeEntry.getKey(), "Member");
+                    alerts.add("⚠️ " + adminName + " assigned " + String.format("%.0f", pct) +
+                            "% of tasks to " + assigneeName + " in the last 14 days.");
+                }
+            }
+        }
+
+        // Bonus coin disparity detection
+        Map<String, Integer> bonusCoinsPerMember = new HashMap<>();
+        for (Task task : recentTasks) {
+            if (task.getAssignedToId() == null) continue;
+            bonusCoinsPerMember.merge(task.getAssignedToId(), task.getCoinsReward(), Integer::sum);
+        }
+        if (!bonusCoinsPerMember.isEmpty()) {
+            double avg = bonusCoinsPerMember.values().stream().mapToInt(i -> i).average().orElse(0);
+            for (Map.Entry<String, Integer> e : bonusCoinsPerMember.entrySet()) {
+                if (e.getValue() > avg * 1.5 && avg > 0) {
+                    String memberName = names.getOrDefault(e.getKey(), "Member");
+                    alerts.add("🪙 " + memberName + " received significantly above-average coins (" +
+                            e.getValue() + " vs avg " + String.format("%.0f", avg) + ") in 14 days.");
+                }
+            }
+        }
+
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("alerts", alerts);
+        result.put("assignmentMatrix", matrix);
+        result.put("memberNames", names);
+        result.put("bonusCoinsPerMember", bonusCoinsPerMember);
+        result.put("periodDays", 14);
+        return result;
+    }
 }

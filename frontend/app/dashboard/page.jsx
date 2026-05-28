@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getMyTasks, getMyGroups, getMyCoins, getMyXP, getGroupHealth } from '@/lib/api';
+import OnboardingTour from '@/components/OnboardingTour';
 
 function XpBar({ xp }) {
   if (!xp) return null;
@@ -54,10 +55,15 @@ export default function DashboardPage() {
   const [xp, setXp] = useState(null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showTour, setShowTour] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('user');
-    if (stored) setUser(JSON.parse(stored));
+    if (stored) {
+      const u = JSON.parse(stored);
+      setUser(u);
+      if (!u.hasSeenTour) setShowTour(true);
+    }
     fetchData();
   }, []);
 
@@ -168,6 +174,7 @@ export default function DashboardPage() {
           {groups.length === 0 && <p style={{ color: '#a0a0a0', textAlign: 'center', padding: '20px', fontSize: '13px' }}>No groups yet!</p>}
         </div>
       </div>
+      {showTour && <OnboardingTour onComplete={() => { setShowTour(false); const u = JSON.parse(localStorage.getItem('user') || '{}'); u.hasSeenTour = true; localStorage.setItem('user', JSON.stringify(u)); }} />}
     </div>
   );
 }

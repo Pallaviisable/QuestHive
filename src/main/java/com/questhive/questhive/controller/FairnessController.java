@@ -16,4 +16,10 @@ public class FairnessController {
     public ResponseEntity<?> getFairnessReport(@PathVariable String groupId) {
         return ResponseEntity.ok(fairnessService.getFairnessReport(groupId));
     }
+
+
+    @GetMapping("/{groupId}/concentration")
+    public ResponseEntity<?> getConcentrationReport(@PathVariable String groupId) {
+        return ResponseEntity.ok(fairnessService.getConcentrationReport(groupId));
+    }
 }

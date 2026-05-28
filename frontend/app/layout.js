@@ -42,7 +42,7 @@ export default function RootLayout({ children }) {
   const [isNavigating, setIsNavigating] = useState(false);
   const [toast, setToast] = useState('');
 
-  const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password'];
+  const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/request-access', '/invite-preview'];
   const isAuthPage = authRoutes.some(route => pathname.startsWith(route));
 
   useEffect(() => {
@@ -88,6 +88,13 @@ export default function RootLayout({ children }) {
 
   return (
     <html lang="en">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#f5c518" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+      </head>
       {/*removed overflow:hidden from body — it was blocking ALL page scrolling */}
       <body style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
 

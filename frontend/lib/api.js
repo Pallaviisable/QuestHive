@@ -113,6 +113,7 @@ export const addCommitmentPledge = (taskId, data) => API.post(`/tasks/${taskId}/
 
 /* FAIRNESS */
 export const getFairnessReport = (groupId) => API.get(`/fairness/${groupId}`);
+export const getConcentrationReport = (groupId) => API.get(`/fairness/${groupId}/concentration`);
 
 /* HEALTH BAR */
 export const getGroupHealth = (groupId) => API.get(`/groups/${groupId}/health`);

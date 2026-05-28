@@ -1,15 +1,19 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { getFairnessReport } from '@/lib/api';
+import { getFairnessReport, getConcentrationReport } from '@/lib/api';
 
 export default function FairnessPage() {
   const { groupId } = useParams();
   const [report, setReport] = useState(null);
+  const [concentration, setConcentration] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getFairnessReport(groupId).then(r => setReport(r.data)).catch(() => {}).finally(() => setLoading(false));
+    Promise.all([
+      getFairnessReport(groupId),
+      getConcentrationReport(groupId)
+    ]).then(([r1, r2]) => { setReport(r1.data); setConcentration(r2.data); }).catch(() => {}).finally(() => setLoading(false));
   }, [groupId]);
 
   if (loading) return <div style={{ padding: '60px', textAlign: 'center', color: '#f5c518' }}>Loading fairness data...</div>;
@@ -52,6 +56,25 @@ export default function FairnessPage() {
           );
         })}
       </div>
+
+      {/* Fairness Part 2 — Concentration Alerts */}
+      {concentration && concentration.alerts && concentration.alerts.length > 0 && (
+        <div style={{ marginTop: '24px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '12px' }}>🚨 Fairness Alerts</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {concentration.alerts.map((alert, i) => (
+              <div key={i} style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '12px', padding: '14px 16px', fontSize: '13px', color: '#fca5a5', lineHeight: 1.5 }}>
+                {alert}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {concentration && (!concentration.alerts || concentration.alerts.length === 0) && (
+        <div style={{ marginTop: '24px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '12px', padding: '14px 16px', fontSize: '13px', color: '#86efac' }}>
+          ✅ No concentration or disparity alerts in the last 14 days.
+        </div>
+      )}
     </div>
   );
 }

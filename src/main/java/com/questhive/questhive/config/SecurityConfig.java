@@ -76,8 +76,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/superadmin/**").hasRole("SUPER_ADMIN")
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
+                // Rate limit runs first, then JWT auth
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

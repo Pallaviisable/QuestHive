@@ -234,6 +234,14 @@ export default function GroupDetailPage() {
       label: '🏆 Leaderboard',
       href: `/groups/${groupId}/leaderboard`,
     },
+    {
+      label: '💬 Chat',
+      href: `/groups/${groupId}/chat`,
+    },
+    {
+      label: '⚖️ Fairness',
+      href: `/groups/${groupId}/fairness`,
+    },
   ];
 
   const tabs = [
