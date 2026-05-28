@@ -19,7 +19,9 @@ export function middleware(request) {
   }
 
   // Already logged in → redirect away from public pages
-  if (token && isPublic) {
+  // BUT: never redirect away from /register?token= (invite link must work even if logged in)
+  const isRegisterWithToken = pathname.startsWith('/register') && request.nextUrl.searchParams.has('token');
+  if (token && isPublic && !isRegisterWithToken) {
     if (role === 'SUPER_ADMIN') {
       return NextResponse.redirect(new URL('/superadmin', request.url));
     }
@@ -27,7 +29,8 @@ export function middleware(request) {
   }
 
   // Super Admin trying to access normal app → redirect to superadmin dashboard
-  if (token && role === 'SUPER_ADMIN' && !pathname.startsWith('/superadmin')) {
+  const isRegisterWithToken2 = pathname.startsWith('/register') && request.nextUrl.searchParams.has('token');
+  if (token && role === 'SUPER_ADMIN' && !pathname.startsWith('/superadmin') && !isRegisterWithToken2) {
     return NextResponse.redirect(new URL('/superadmin', request.url));
   }
 

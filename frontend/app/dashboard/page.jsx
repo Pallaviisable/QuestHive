@@ -24,7 +24,6 @@ function XpBar({ xp }) {
         }} />
       </div>
       <div style={{ marginTop: '6px', fontSize: '11px', color: '#444' }}>Total XP: {xp.totalXp}</div>
-      {showTour && <OnboardingTour onComplete={() => { setShowTour(false); const u = JSON.parse(localStorage.getItem('user') || '{}'); u.hasSeenTour = true; localStorage.setItem('user', JSON.stringify(u)); }} />}
     </div>
   );
 }
@@ -175,6 +174,7 @@ export default function DashboardPage() {
           {groups.length === 0 && <p style={{ color: '#a0a0a0', textAlign: 'center', padding: '20px', fontSize: '13px' }}>No groups yet!</p>}
         </div>
       </div>
+      {showTour && <OnboardingTour onComplete={() => { setShowTour(false); const u = JSON.parse(localStorage.getItem('user') || '{}'); u.hasSeenTour = true; localStorage.setItem('user', JSON.stringify(u)); }} />}
     </div>
   );
 }

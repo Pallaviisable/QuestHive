@@ -85,6 +85,7 @@ public class SuperAdminService {
         }
         user.setStatus("DEACTIVATED");
         userRepository.save(user);
+        emailService.sendAccountDeactivated(user.getEmail(), user.getFullName());
     }
 
     public void activateUser(String userId) {
@@ -92,5 +93,6 @@ public class SuperAdminService {
                 .orElseThrow(() -> new RuntimeException("User not found."));
         user.setStatus("ACTIVE");
         userRepository.save(user);
+        emailService.sendAccountReactivated(user.getEmail(), user.getFullName());
     }
 }

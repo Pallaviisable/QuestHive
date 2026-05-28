@@ -27,11 +27,13 @@ public class EmailService {
             headers.set("api-key", brevoApiKey);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
+            String safeBody = textContent.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "");
+            String safeSubject = subject.replace("\"", "\\\"");
             String body = "{"
                     + "\"sender\": {\"email\": \"" + senderEmail + "\", \"name\": \"QuestHive\"},"
                     + "\"to\": [{\"email\": \"" + toEmail + "\"}],"
-                    + "\"subject\": \"" + subject + "\","
-                    + "\"textContent\": \"" + textContent + "\""
+                    + "\"subject\": \"" + safeSubject + "\","
+                    + "\"textContent\": \"" + safeBody + "\""
                     + "}";
 
             HttpEntity<String> entity = new HttpEntity<>(body, headers);
@@ -212,6 +214,25 @@ public class EmailService {
                 + "Here's your weekly summary for " + groupName + ".\n\n"
                 + "Log in to QuestHive to see your full stats, coins earned, and the Quest Master winner!\n\n"
                 + "Keep up the great work in your hive! 🐝\n\n"
+                + "— The QuestHive Team";
+        sendEmail(toEmail, subject, body);
+    }
+
+    public void sendAccountDeactivated(String toEmail, String fullName) {
+        String subject = "Your QuestHive account has been deactivated";
+        String body = "Hi " + fullName + ",\n\n"
+                + "Your QuestHive account has been deactivated by the Super Admin.\n"
+                + "You will not be able to log in until your account is reactivated.\n\n"
+                + "If you believe this is a mistake, please contact your administrator.\n\n"
+                + "— The QuestHive Team";
+        sendEmail(toEmail, subject, body);
+    }
+
+    public void sendAccountReactivated(String toEmail, String fullName) {
+        String subject = "Your QuestHive account has been reactivated";
+        String body = "Hi " + fullName + ",\n\n"
+                + "Great news! Your QuestHive account has been reactivated.\n"
+                + "You can now log in and resume your quests.\n\n"
                 + "— The QuestHive Team";
         sendEmail(toEmail, subject, body);
     }

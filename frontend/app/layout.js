@@ -42,7 +42,7 @@ export default function RootLayout({ children }) {
   const [isNavigating, setIsNavigating] = useState(false);
   const [toast, setToast] = useState('');
 
-  const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password'];
+  const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/request-access', '/invite-preview'];
   const isAuthPage = authRoutes.some(route => pathname.startsWith(route));
 
   useEffect(() => {
