@@ -74,6 +74,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/invite/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/api/superadmin/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers("/api/analytics/**").hasRole("SUPER_ADMIN")
                         .anyRequest().authenticated()
                 )
                 // Rate limit runs first, then JWT auth
