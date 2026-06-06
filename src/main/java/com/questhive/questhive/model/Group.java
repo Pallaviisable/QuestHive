@@ -17,18 +17,19 @@ public class Group {
     private String description;
     private String adminId;
     private List<String> memberIds;
-    private List<String> deactivatedMemberIds; // members blocked from this group
+    private List<String> deactivatedMemberIds;
     private String inviteCode;
     private LocalDateTime createdAt;
+    private LocalDateTime lastActivityAt;
 
-    // Week 1 additions
-    private String template;               // FAMILY or CUSTOM
-    private List<String> taskCategories;   // pre-filled by template
+    private String template;
+    private List<String> taskCategories;
 
     public Group() {
         this.memberIds = new ArrayList<>();
         this.deactivatedMemberIds = new ArrayList<>();
         this.taskCategories = new ArrayList<>();
         this.createdAt = LocalDateTime.now();
+        this.lastActivityAt = LocalDateTime.now();
     }
 }

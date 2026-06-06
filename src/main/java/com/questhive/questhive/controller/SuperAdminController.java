@@ -37,10 +37,14 @@ public class SuperAdminController {
         }
     }
 
+    // Enhancement #4: reject now accepts reason in body
     @PostMapping("/requests/{id}/reject")
-    public ResponseEntity<?> rejectRequest(@PathVariable String id) {
+    public ResponseEntity<?> rejectRequest(
+            @PathVariable String id,
+            @RequestBody(required = false) Map<String, String> body) {
         try {
-            superAdminService.rejectRequest(id);
+            String reason = body != null ? body.getOrDefault("reason", "") : "";
+            superAdminService.rejectRequest(id, reason);
             return ResponseEntity.ok(Map.of("message", "Request rejected."));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -62,10 +66,14 @@ public class SuperAdminController {
         }
     }
 
+    // Enhancement #4: deactivate now accepts reason in body
     @PostMapping("/users/{id}/deactivate")
-    public ResponseEntity<?> deactivateUser(@PathVariable String id) {
+    public ResponseEntity<?> deactivateUser(
+            @PathVariable String id,
+            @RequestBody(required = false) Map<String, String> body) {
         try {
-            superAdminService.deactivateUser(id);
+            String reason = body != null ? body.getOrDefault("reason", "") : "";
+            superAdminService.deactivateUser(id, reason);
             return ResponseEntity.ok(Map.of("message", "User deactivated."));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));

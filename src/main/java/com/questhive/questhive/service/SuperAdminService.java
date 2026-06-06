@@ -47,7 +47,8 @@ public class SuperAdminService {
         emailService.sendAdminRequestApproved(request.getEmail(), request.getFullName(), registrationLink);
     }
 
-    public void rejectRequest(String requestId) {
+    // Enhancement #4: accepts reason, passes to email
+    public void rejectRequest(String requestId, String reason) {
         AdminRequest request = adminRequestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Request not found."));
         if (!"PENDING".equals(request.getStatus())) {
@@ -55,7 +56,7 @@ public class SuperAdminService {
         }
         request.setStatus("REJECTED");
         adminRequestRepository.save(request);
-        emailService.sendAdminRequestRejected(request.getEmail(), request.getFullName());
+        emailService.sendAdminRequestRejected(request.getEmail(), request.getFullName(), reason);
     }
 
     public List<User> getAllUsers() {
@@ -64,20 +65,25 @@ public class SuperAdminService {
                 .toList();
     }
 
+    // Enhancement #8: when admin is removed, delete their groups too
     public void removeUser(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found."));
         if ("SUPER_ADMIN".equals(user.getRole())) {
             throw new RuntimeException("Cannot remove Super Admin.");
         }
+        // Remove from all groups they're a member of
         groupRepository.findByMemberIdsContaining(userId).forEach(group -> {
             group.getMemberIds().remove(userId);
             groupRepository.save(group);
         });
+        // Delete all groups they admin
+        groupRepository.findByAdminId(userId).forEach(groupRepository::delete);
         userRepository.delete(user);
     }
 
-    public void deactivateUser(String userId) {
+    // Enhancement #4: accepts reason, passes to email
+    public void deactivateUser(String userId, String reason) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found."));
         if ("SUPER_ADMIN".equals(user.getRole())) {
@@ -85,7 +91,7 @@ public class SuperAdminService {
         }
         user.setStatus("DEACTIVATED");
         userRepository.save(user);
-        emailService.sendAccountDeactivated(user.getEmail(), user.getFullName());
+        emailService.sendAccountDeactivated(user.getEmail(), user.getFullName(), reason);
     }
 
     public void activateUser(String userId) {

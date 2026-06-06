@@ -299,7 +299,6 @@ export default function SettingsPage() {
             { q: '🪺 What is MyNest?', a: "MyNest is your personal task space — tasks only you can see. These don't earn coins since they're not group tasks." },
             { q: '👑 What is Quest Master?', a: 'Every Monday, the member who earned the most coins that week is crowned Quest Master of the week.' },
             { q: '📧 How do I change my email or password?', a: 'Go to Settings → Profile to update your name, username (once), or email. Go to Settings → Password to change your password.' },
-            { q: '🗺️ How does the Map feature work?', a: 'The Map shows real-time locations of group members who have shared their location. It works best on mobile with GPS.' },
           ].map((item, i) => (
             <div key={i} className="card" style={{ padding: '20px' }}>
               <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '8px' }}>{item.q}</div>

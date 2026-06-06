@@ -1,5 +1,6 @@
 package com.questhive.questhive.service;
 
+import com.questhive.questhive.model.Group;
 import com.questhive.questhive.model.GroupActivity;
 import com.questhive.questhive.model.Task;
 import com.questhive.questhive.model.Task.Priority;
@@ -7,8 +8,8 @@ import com.questhive.questhive.model.Task.Status;
 import com.questhive.questhive.model.Task.Category;
 import com.questhive.questhive.model.User;
 import com.questhive.questhive.repository.GroupActivityRepository;
-import com.questhive.questhive.repository.TaskRepository;
 import com.questhive.questhive.repository.GroupRepository;
+import com.questhive.questhive.repository.TaskRepository;
 import com.questhive.questhive.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,7 +27,7 @@ public class TaskService {
     private final EmailService emailService;
     private final RewardService rewardService;
     private final XpService xpService;
-    private final GroupActivityRepository groupActivityRepository; // ← NEW
+    private final GroupActivityRepository groupActivityRepository;
 
     public Task createGroupTask(String assignedById, String assignedToId, String groupId,
                                 String title, String description, Priority priority,
@@ -58,22 +59,19 @@ public class TaskService {
 
         Task saved = taskRepository.save(task);
 
-        // Log activity + send email if assigned to someone
         if (assignedToId != null) {
             String finalAssignedToId = assignedToId;
-            userRepository.findById(assignedToId).ifPresent(assignee -> {
+            userRepository.findById(assignedToId).ifPresent(assignee ->
                 userRepository.findById(assignedById).ifPresent(assigner -> {
                     emailService.sendTaskAssignedNotification(
                             assignee.getEmail(), assigner.getFullName(), title,
                             priority.name(), deadline != null ? deadline.toString() : "No deadline");
-                    // ← Activity log
                     logActivity(groupId, "TASK_ASSIGNED", assigner.getFullName(), assignee.getFullName(), title, 0);
-                });
-            });
+                })
+            );
         } else {
-            // Open task posted
             userRepository.findById(assignedById).ifPresent(assigner ->
-                    logActivity(groupId, "TASK_ASSIGNED", assigner.getFullName(), "Open (anyone can claim)", title, 0));
+                logActivity(groupId, "TASK_ASSIGNED", assigner.getFullName(), "Open (anyone can claim)", title, 0));
         }
 
         return saved;
@@ -110,17 +108,14 @@ public class TaskService {
             task.setCompletedAt(LocalDateTime.now());
             if (task.getGroupId() != null) {
                 rewardService.handleTaskCompletion(userId, task);
-                // Award XP based on priority
                 int xpAmount = switch (task.getPriority()) {
                     case HIGH   -> 50;
                     case MEDIUM -> 25;
                     default     -> 10;
                 };
-                xpService.awardXp(userId, task.getGroupId(), xpAmount,
-                        "Completed task: " + task.getTitle());
-                // ← Activity log
+                xpService.awardXp(userId, task.getGroupId(), xpAmount, "Completed task: " + task.getTitle());
                 userRepository.findById(userId).ifPresent(user ->
-                        logActivity(task.getGroupId(), "TASK_COMPLETED", user.getFullName(), null, task.getTitle(), task.getCoinsReward()));
+                    logActivity(task.getGroupId(), "TASK_COMPLETED", user.getFullName(), null, task.getTitle(), task.getCoinsReward()));
             }
         }
 
@@ -130,25 +125,18 @@ public class TaskService {
     public Task claimTask(String userId, String taskId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found."));
-
         if (task.getAssignedToId() != null) {
             throw new RuntimeException("This task has already been claimed.");
         }
-
         task.setAssignedToId(userId);
-
-        // ← Activity log
         userRepository.findById(userId).ifPresent(user ->
-                logActivity(task.getGroupId(), "TASK_CLAIMED", user.getFullName(), null, task.getTitle(), 0));
-
+            logActivity(task.getGroupId(), "TASK_CLAIMED", user.getFullName(), null, task.getTitle(), 0));
         return taskRepository.save(task);
     }
 
-    // deny a task
     public Task denyTask(String userId, String taskId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found."));
-
         if (!userId.equals(task.getAssignedToId())) {
             throw new RuntimeException("You can only deny tasks assigned to you.");
         }
@@ -162,25 +150,22 @@ public class TaskService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found."));
 
-        // HIGH priority denial → deduct 5 coins, add +5 bonus for whoever accepts
         if (task.getPriority() == Priority.HIGH) {
             user.setCoins(Math.max(0, user.getCoins() - 5));
             userRepository.save(user);
             task.setOpenTaskBonus(true);
-            task.setCoinsReward(task.getCoinsReward() + 5); // bonus for next person
+            task.setCoinsReward(task.getCoinsReward() + 5);
             logActivity(task.getGroupId(), "TASK_DENIED", user.getFullName(), null,
                     task.getTitle() + " (HIGH priority — -5 coins, +5 bonus added)", -5);
         } else {
             logActivity(task.getGroupId(), "TASK_DENIED", user.getFullName(), null, task.getTitle(), 0);
         }
 
-        // Reopen the task
         task.setAssignedToId(null);
         task.setStatus(Status.PENDING);
         return taskRepository.save(task);
     }
 
-    // open task 6hr/8hr notification flow (replaces auto-assign)
     public void processOpenTaskNotifications() {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime sixHoursAgo = now.minusHours(6);
@@ -194,10 +179,8 @@ public class TaskService {
             var group = groupRepository.findById(groupId).orElse(null);
             if (group == null) continue;
 
-            // 8hr+ (2hr after notification) → deduct 5 coins from all members
             if (task.getOpenTaskNotifiedAt() != null &&
                     task.getOpenTaskNotifiedAt().isBefore(twoHoursAgo)) {
-
                 for (String memberId : group.getMemberIds()) {
                     userRepository.findById(memberId).ifPresent(member -> {
                         member.setCoins(Math.max(0, member.getCoins() - 5));
@@ -207,19 +190,15 @@ public class TaskService {
                 }
                 logActivity(groupId, "OPEN_TASK_PENALTY", "System", null,
                         "\"" + task.getTitle() + "\" unclaimed — all members -5 coins", -5);
-
-                // Auto-assign to admin as last resort so it doesn't loop
                 userRepository.findById(group.getAdminId()).ifPresent(admin -> {
                     task.setAssignedToId(admin.getId());
                     task.setOpenTaskNotifiedAt(null);
                     taskRepository.save(task);
                 });
-
-                // 6hr+ with no notification yet → notify all members
             } else if (task.getOpenTaskNotifiedAt() == null) {
                 for (String memberId : group.getMemberIds()) {
                     userRepository.findById(memberId).ifPresent(member ->
-                            emailService.sendOpenTaskReminder(member.getEmail(), task.getTitle(), group.getName()));
+                        emailService.sendOpenTaskReminder(member.getEmail(), task.getTitle(), group.getName()));
                 }
                 task.setOpenTaskNotifiedAt(now);
                 taskRepository.save(task);
@@ -227,6 +206,51 @@ public class TaskService {
                         "\"" + task.getTitle() + "\" unclaimed for 6 hours — members notified", 0);
             }
         }
+    }
+
+    // Enhancement #7: only admin or task creator can edit
+    public Task editTask(String requesterId, String taskId, String title, String description,
+                         Priority priority, Category category, LocalDateTime deadline, Integer bonusCoins) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found."));
+
+        // Get group to check if requester is admin
+        boolean isGroupAdmin = false;
+        if (task.getGroupId() != null) {
+            Group group = groupRepository.findById(task.getGroupId()).orElse(null);
+            if (group != null) isGroupAdmin = group.getAdminId().equals(requesterId);
+        }
+
+        if (!task.getAssignedById().equals(requesterId) && !isGroupAdmin) {
+            throw new RuntimeException("Only the task creator or group admin can edit this task.");
+        }
+
+        if (title != null) task.setTitle(title);
+        if (description != null) task.setDescription(description);
+        if (priority != null) {
+            task.setPriority(priority);
+            task.setCoinsReward(baseCoins(priority) + (bonusCoins != null ? bonusCoins : 0));
+        }
+        if (category != null) task.setCategory(category);
+        if (deadline != null) task.setDeadline(deadline);
+        return taskRepository.save(task);
+    }
+
+    // Enhancement #7: only admin or task creator can delete
+    public void deleteTask(String requesterId, String taskId) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found."));
+
+        boolean isGroupAdmin = false;
+        if (task.getGroupId() != null) {
+            Group group = groupRepository.findById(task.getGroupId()).orElse(null);
+            if (group != null) isGroupAdmin = group.getAdminId().equals(requesterId);
+        }
+
+        if (!task.getAssignedById().equals(requesterId) && !isGroupAdmin) {
+            throw new RuntimeException("Only the task creator or group admin can delete this task.");
+        }
+        taskRepository.delete(task);
     }
 
     public List<Task> getTasksForGroup(String groupId) {
@@ -254,31 +278,40 @@ public class TaskService {
         return taskRepository.findByAssignedByIdAndGroupId(userId, groupId);
     }
 
-    public Task editTask(String requesterId, String taskId, String title, String description,
-                         Priority priority, Category category, LocalDateTime deadline, Integer bonusCoins) {
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new RuntimeException("Task not found."));
-        if (!task.getAssignedById().equals(requesterId)) {
-            throw new RuntimeException("Only the task assigner can edit this task.");
-        }
-        if (title != null) task.setTitle(title);
-        if (description != null) task.setDescription(description);
-        if (priority != null) {
-            task.setPriority(priority);
-            task.setCoinsReward(baseCoins(priority) + (bonusCoins != null ? bonusCoins : 0));
-        }
-        if (category != null) task.setCategory(category);
-        if (deadline != null) task.setDeadline(deadline);
-        return taskRepository.save(task);
-    }
+    // Bug #6: auto-complete parent task when all subtasks are done
+    public Task completeSubtask(String taskId, String subtaskId) {
+        Task task = getTask(taskId);
 
-    public void deleteTask(String requesterId, String taskId) {
-        Task task = taskRepository.findById(taskId)
-                .orElseThrow(() -> new RuntimeException("Task not found."));
-        if (!task.getAssignedById().equals(requesterId)) {
-            throw new RuntimeException("Only the task assigner can delete this task.");
+        task.getSubtasks().stream()
+                .filter(s -> subtaskId.equals(s.getId()))
+                .findFirst()
+                .ifPresent(s -> {
+                    s.setCompleted(true);
+                    s.setCompletedAt(LocalDateTime.now());
+                });
+
+        // Auto-complete parent if all subtasks done
+        boolean allDone = !task.getSubtasks().isEmpty() &&
+                task.getSubtasks().stream().allMatch(Task.Subtask::isCompleted);
+        if (allDone && task.getStatus() != Status.COMPLETED) {
+            task.setStatus(Status.COMPLETED);
+            task.setCompletedAt(LocalDateTime.now());
+            if (task.getGroupId() != null && task.getAssignedToId() != null) {
+                rewardService.handleTaskCompletion(task.getAssignedToId(), task);
+                int xpAmount = switch (task.getPriority()) {
+                    case HIGH   -> 50;
+                    case MEDIUM -> 25;
+                    default     -> 10;
+                };
+                xpService.awardXp(task.getAssignedToId(), task.getGroupId(), xpAmount,
+                        "Auto-completed via subtasks: " + task.getTitle());
+                userRepository.findById(task.getAssignedToId()).ifPresent(user ->
+                    logActivity(task.getGroupId(), "TASK_COMPLETED", user.getFullName(), null,
+                            task.getTitle() + " (all subtasks done)", task.getCoinsReward()));
+            }
         }
-        taskRepository.delete(task);
+
+        return taskRepository.save(task);
     }
 
     public boolean hasRecurringPattern(String userId, Category category) {
@@ -296,68 +329,25 @@ public class TaskService {
         return true;
     }
 
-    private int baseCoins(Priority priority) {
-        return switch (priority) {
-            case LOW -> 5;
-            case MEDIUM -> 10;
-            case HIGH -> 20;
-        };
-    }
-
-    private void logActivity(String groupId, String type, String actorName, String targetName, String detail, int coins) {
-        if (groupId == null) return;
-        GroupActivity activity = new GroupActivity();
-        activity.setGroupId(groupId);
-        activity.setType(type);
-        activity.setActorName(actorName);
-        activity.setTargetName(targetName);
-        activity.setDetail(detail);
-        activity.setCoins(coins);
-        groupActivityRepository.save(activity);
-    }
-
     public Task updateTaskPriority(String requesterId, String taskId, Priority newPriority) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new RuntimeException("Task not found"));
-
-        com.questhive.questhive.model.Group group = groupRepository.findById(task.getGroupId())
+        Group group = groupRepository.findById(task.getGroupId())
                 .orElseThrow(() -> new RuntimeException("Group not found"));
-
-        // Only admin can change priority
         if (!group.getAdminId().equals(requesterId)) {
             throw new RuntimeException("Only the group admin can change task priority");
         }
-
-        // Cannot change priority of completed tasks
         if (task.getStatus() == Status.COMPLETED) {
             throw new RuntimeException("Cannot change priority of a completed task");
         }
-
         Priority oldPriority = task.getPriority();
-
-        // Preserve bonus coins on top of old base
-        int oldBase = baseCoins(oldPriority);
-        int bonusCoins = Math.max(0, task.getCoinsReward() - oldBase);
-
-        // Set new priority and recalculate
+        int bonusCoins = Math.max(0, task.getCoinsReward() - baseCoins(oldPriority));
         task.setPriority(newPriority);
         task.setCoinsReward(baseCoins(newPriority) + bonusCoins);
-
         taskRepository.save(task);
-
-        // Log activity using existing logActivity helper
         userRepository.findById(requesterId).ifPresent(requester ->
-                logActivity(
-                        task.getGroupId(),
-                        "PRIORITY_CHANGED",
-                        requester.getFullName(),
-                        null,
-                        "\"" + task.getTitle() + "\" priority changed from "
-                                + oldPriority.name() + " → " + newPriority.name(),
-                        0
-                )
-        );
-
+            logActivity(task.getGroupId(), "PRIORITY_CHANGED", requester.getFullName(), null,
+                    "\"" + task.getTitle() + "\" priority changed from " + oldPriority.name() + " → " + newPriority.name(), 0));
         return task;
     }
 
@@ -370,49 +360,52 @@ public class TaskService {
         Task task = getTask(taskId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
-
         Task.TaskComment comment = new Task.TaskComment();
         comment.setId(java.util.UUID.randomUUID().toString());
         comment.setUserId(userId);
         comment.setAuthorName(user.getFullName() != null ? user.getFullName() : user.getUsername());
         comment.setContent(content);
-        comment.setCreatedAt(java.time.LocalDateTime.now());
-
+        comment.setCreatedAt(LocalDateTime.now());
         task.getComments().add(comment);
         return taskRepository.save(task);
     }
 
     public Task addSubtask(String taskId, String title) {
         Task task = getTask(taskId);
-
         Task.Subtask subtask = new Task.Subtask();
         subtask.setId(java.util.UUID.randomUUID().toString());
         subtask.setTitle(title);
         subtask.setCompleted(false);
-
         task.getSubtasks().add(subtask);
-        return taskRepository.save(task);
-    }
-
-    public Task completeSubtask(String taskId, String subtaskId) {
-        Task task = getTask(taskId);
-
-        task.getSubtasks().stream()
-                .filter(s -> subtaskId.equals(s.getId()))
-                .findFirst()
-                .ifPresent(s -> {
-                    s.setCompleted(true);
-                    s.setCompletedAt(java.time.LocalDateTime.now());
-                });
-
         return taskRepository.save(task);
     }
 
     public Task addPledge(String taskId, String userId, String message) {
         Task task = getTask(taskId);
         task.setPledgeMessage(message);
-        task.setPledgedAt(java.time.LocalDateTime.now());
+        task.setPledgedAt(LocalDateTime.now());
         task.setPledgedByUserId(userId);
         return taskRepository.save(task);
+    }
+
+    private int baseCoins(Priority priority) {
+        return switch (priority) {
+            case LOW -> 5;
+            case MEDIUM -> 10;
+            case HIGH -> 20;
+        };
+    }
+
+    private void logActivity(String groupId, String type, String actorName,
+                             String targetName, String detail, int coins) {
+        if (groupId == null) return;
+        GroupActivity activity = new GroupActivity();
+        activity.setGroupId(groupId);
+        activity.setType(type);
+        activity.setActorName(actorName);
+        activity.setTargetName(targetName);
+        activity.setDetail(detail);
+        activity.setCoins(coins);
+        groupActivityRepository.save(activity);
     }
 }

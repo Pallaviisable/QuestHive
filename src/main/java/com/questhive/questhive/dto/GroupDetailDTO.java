@@ -1,4 +1,3 @@
-// com/questhive/questhive/dto/GroupDetailDTO.java
 package com.questhive.questhive.dto;
 
 import lombok.Data;
@@ -14,4 +13,7 @@ public class GroupDetailDTO {
     private String inviteCode;
     private LocalDateTime createdAt;
     private List<MemberDTO> members;
+    private String template;
+    private List<String> taskCategories;
+    private List<String> deactivatedMemberIds;
 }

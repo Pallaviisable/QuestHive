@@ -35,21 +35,16 @@ public class AuthService {
     @Value("${hcaptcha.verify.url:https://hcaptcha.com/siteverify}")
     private String hcaptchaVerifyUrl;
 
-    // ── NEW: invite-based registration ───────────────────────────────────────
     public void register(String fullName, String username, String email,
                          String password, String inviteToken, String captchaToken) {
-
-        // 1. Verify CAPTCHA (skipped locally if secret is blank)
         verifyCaptcha(captchaToken);
 
-        // 2. Validate invite token
         Invite invite = inviteService.validateToken(inviteToken);
         if (!invite.getEmail().equalsIgnoreCase(email.trim())) {
             throw new RuntimeException(
                     "This invite was sent to " + invite.getEmail() + ". Use that email to register.");
         }
 
-        // 3. Check for duplicate account
         if (userRepository.existsByEmail(email.trim().toLowerCase())) {
             throw new RuntimeException("An account with this email already exists. Please login.");
         }
@@ -57,10 +52,13 @@ public class AuthService {
             throw new RuntimeException("This username is already taken. Please choose another.");
         }
 
-        // 4. Determine role from invite type
+        // Name minimum 3 characters
+        if (fullName == null || fullName.trim().length() < 3) {
+            throw new RuntimeException("Full name must be at least 3 characters.");
+        }
+
         String role = "ADMIN".equals(invite.getType()) ? "FAMILY_ADMIN" : "MEMBER";
 
-        // 5. Create user — no OTP needed, email was verified by clicking the link
         User user = new User();
         user.setFullName(fullName.trim());
         user.setUsername(username.trim());
@@ -70,9 +68,9 @@ public class AuthService {
         user.setRole(role);
         user.setStatus("ACTIVE");
         user.setHasSeenTour(false);
+        user.setCreatedAt(LocalDateTime.now());
         userRepository.save(user);
 
-        // 6. If MEMBER invite, add to group immediately
         if ("MEMBER".equals(invite.getType()) && invite.getGroupId() != null) {
             groupRepository.findById(invite.getGroupId()).ifPresent(group -> {
                 if (!group.getMemberIds().contains(user.getId())) {
@@ -82,14 +80,10 @@ public class AuthService {
             });
         }
 
-        // 7. Mark invite as used
         inviteService.markUsed(inviteToken);
-
-        // 8. Welcome email
         emailService.sendWelcomeEmail(user.getEmail(), user.getFullName());
     }
 
-    // ── Login: now checks status ──────────────────────────────────────────────
     public String login(String email, String password) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("No account found with this email."));
@@ -106,7 +100,6 @@ public class AuthService {
         return jwtUtil.generateToken(user.getId(), user.getEmail());
     }
 
-    // ── Onboarding tour complete ──────────────────────────────────────────────
     public void completeTour(String userId) {
         userRepository.findById(userId).ifPresent(user -> {
             user.setHasSeenTour(true);
@@ -114,32 +107,48 @@ public class AuthService {
         });
     }
 
-    // ── CAPTCHA verification ──────────────────────────────────────────────────
-    private void verifyCaptcha(String captchaToken) {
-        if (hcaptchaSecret == null || hcaptchaSecret.isBlank()) {
-            return; // skip in local dev when secret not configured
-        }
-        if (captchaToken == null || captchaToken.isBlank()) {
-            throw new RuntimeException("Please complete the CAPTCHA verification.");
-        }
-        try {
-            RestTemplate restTemplate = new RestTemplate();
-            MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
-            params.add("secret", hcaptchaSecret);
-            params.add("response", captchaToken);
-            ResponseEntity<Map> res = restTemplate.postForEntity(hcaptchaVerifyUrl, params, Map.class);
-            Boolean success = res.getBody() != null && (Boolean) res.getBody().get("success");
-            if (!Boolean.TRUE.equals(success)) {
-                throw new RuntimeException("CAPTCHA verification failed. Please try again.");
-            }
-        } catch (RuntimeException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new RuntimeException("CAPTCHA error. Please try again.");
-        }
+    public void forgotPassword(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("No account found with this email."));
+        String otp = generateOtp();
+        user.setOtpCode(otp);
+        user.setOtpExpiry(LocalDateTime.now().plusMinutes(10));
+        userRepository.save(user);
+        emailService.sendOtp(email, otp);
     }
 
-    // ── All existing methods below — unchanged ────────────────────────────────
+    // Resend OTP — generates a fresh code, invalidates old one
+    public void resendOtp(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("No account found with this email."));
+        String otp = generateOtp();
+        user.setOtpCode(otp);
+        user.setOtpExpiry(LocalDateTime.now().plusMinutes(10));
+        userRepository.save(user);
+        emailService.resendOtp(email, otp);
+    }
+
+    public void resetPassword(String email, String otp, String newPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found."));
+
+        if (user.getOtpCode() == null || !user.getOtpCode().equals(otp)) {
+            throw new RuntimeException("Invalid OTP. Please try again.");
+        }
+        if (user.getOtpExpiry() == null || user.getOtpExpiry().isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("OTP has expired. Please request a new one.");
+        }
+
+        // Bug #3 fix: new password cannot be same as current
+        if (passwordEncoder.matches(newPassword, user.getPassword())) {
+            throw new RuntimeException("New password cannot be the same as your current password.");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setOtpCode(null);
+        user.setOtpExpiry(null);
+        userRepository.save(user);
+    }
 
     public void verifyEmail(String email, String otp) {
         User user = userRepository.findByEmail(email)
@@ -156,36 +165,17 @@ public class AuthService {
         userRepository.save(user);
     }
 
-    public void forgotPassword(String email) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("No account found with this email."));
-        String otp = String.format("%06d", new Random().nextInt(999999));
-        user.setOtpCode(otp);
-        user.setOtpExpiry(LocalDateTime.now().plusMinutes(10));
-        userRepository.save(user);
-        emailService.sendOtp(email, otp);
-    }
-
-    public void resetPassword(String email, String otp, String newPassword) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found."));
-        if (user.getOtpCode() == null || !user.getOtpCode().equals(otp)) {
-            throw new RuntimeException("Invalid OTP. Please try again.");
-        }
-        if (user.getOtpExpiry().isBefore(LocalDateTime.now())) {
-            throw new RuntimeException("OTP has expired. Please request a new one.");
-        }
-        user.setPassword(passwordEncoder.encode(newPassword));
-        user.setOtpCode(null);
-        user.setOtpExpiry(null);
-        userRepository.save(user);
-    }
-
     public User updateProfile(String userId, String fullName, String newUsername,
                               String newPassword, String currentPassword) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found."));
-        if (fullName != null && !fullName.isBlank()) user.setFullName(fullName);
+
+        if (fullName != null && !fullName.isBlank()) {
+            if (fullName.trim().length() < 3) {
+                throw new RuntimeException("Full name must be at least 3 characters.");
+            }
+            user.setFullName(fullName.trim());
+        }
         if (newUsername != null && !newUsername.isBlank() && !newUsername.equals(user.getUsername())) {
             if (user.isUsernameChanged()) throw new RuntimeException("Username can only be changed once.");
             if (userRepository.existsByUsername(newUsername)) throw new RuntimeException("Username already taken.");
@@ -195,6 +185,9 @@ public class AuthService {
         if (newPassword != null && !newPassword.isBlank()) {
             if (currentPassword == null || !passwordEncoder.matches(currentPassword, user.getPassword())) {
                 throw new RuntimeException("Current password is incorrect.");
+            }
+            if (passwordEncoder.matches(newPassword, user.getPassword())) {
+                throw new RuntimeException("New password cannot be the same as your current password.");
             }
             user.setPassword(passwordEncoder.encode(newPassword));
         }
@@ -208,7 +201,7 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found."));
         if (newEmail.equals(user.getEmail())) throw new RuntimeException("This is already your current email.");
-        String otp = String.format("%06d", new Random().nextInt(999999));
+        String otp = generateOtp();
         user.setPendingEmail(newEmail);
         user.setOtpCode(otp);
         user.setOtpExpiry(LocalDateTime.now().plusMinutes(10));
@@ -236,5 +229,31 @@ public class AuthService {
             throw new RuntimeException("Incorrect password. Cannot delete account.");
         }
         userRepository.delete(user);
+    }
+
+    private String generateOtp() {
+        return String.format("%06d", new Random().nextInt(999999));
+    }
+
+    private void verifyCaptcha(String captchaToken) {
+        if (hcaptchaSecret == null || hcaptchaSecret.isBlank()) return;
+        if (captchaToken == null || captchaToken.isBlank()) {
+            throw new RuntimeException("Please complete the CAPTCHA verification.");
+        }
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+            params.add("secret", hcaptchaSecret);
+            params.add("response", captchaToken);
+            ResponseEntity<Map> res = restTemplate.postForEntity(hcaptchaVerifyUrl, params, Map.class);
+            Boolean success = res.getBody() != null && (Boolean) res.getBody().get("success");
+            if (!Boolean.TRUE.equals(success)) {
+                throw new RuntimeException("CAPTCHA verification failed. Please try again.");
+            }
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("CAPTCHA error. Please try again.");
+        }
     }
 }

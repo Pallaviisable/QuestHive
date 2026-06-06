@@ -308,46 +308,82 @@ export default function RewardsPage() {
         </div>
       )}
 
-      {/* ── HISTORY TAB ── */}
+            {/* ── HISTORY TAB ── full earned history: coins + streaks + badges */}
       {activeTab === 'HISTORY' && (
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-            <label style={{ color: '#a0a0a0', fontSize: '13px', whiteSpace: 'nowrap' }}>Group:</label>
-            <select className="input" value={selectedGroup} onChange={e => setSelectedGroup(e.target.value)}
-              style={{ fontSize: '13px', maxWidth: '240px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(130px,1fr))', gap: '10px', marginBottom: '24px' }}>
+            {[
+              { label: 'Total Earned', value: rewards.reduce((s,r) => s + (r.coinsEarned||0), 0) + ' 🪙', color: '#f5c518' },
+              { label: 'Task Rewards', value: rewards.filter(r=>r.type==='TASK_COMPLETION').length, color: '#22c55e' },
+              { label: 'Streak Bonuses', value: rewards.filter(r=>r.type==='STREAK_BONUS').length, color: '#3b82f6' },
+              { label: 'Quest Master', value: rewards.filter(r=>r.type==='QUEST_MASTER').length, color: '#a855f7' },
+            ].map((s,i) => (
+              <div key={i} style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '12px', padding: '14px', textAlign: 'center' }}>
+                <div style={{ fontSize: '18px', fontWeight: 800, color: s.color }}>{s.value}</div>
+                <div style={{ fontSize: '11px', color: '#555', marginTop: '4px', fontWeight: 600 }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+
+          <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#a0a0a0', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Earned History</h3>
+          {rewards.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 20px', background: '#1a1a1a', borderRadius: '16px', border: '1px dashed #2a2a2a' }}>
+              <div style={{ fontSize: '40px', marginBottom: '12px' }}>🧾</div>
+              <p style={{ color: '#fff', fontWeight: 700, marginBottom: '6px' }}>No rewards yet</p>
+              <p style={{ color: '#a0a0a0', fontSize: '13px' }}>Complete tasks to earn coins, streaks and badges!</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '32px' }}>
+              {[...rewards].sort((a,b) => new Date(b.earnedAt) - new Date(a.earnedAt)).map((r, i) => {
+                const typeConfig = {
+                  TASK_COMPLETION: { icon: '✅', color: '#22c55e', bg: 'rgba(34,197,94,0.1)', border: 'rgba(34,197,94,0.2)', label: 'Task Completed' },
+                  STREAK_BONUS:    { icon: '🔥', color: '#f97316', bg: 'rgba(249,115,22,0.1)', border: 'rgba(249,115,22,0.2)', label: 'Streak Bonus' },
+                  QUEST_MASTER:    { icon: '👑', color: '#a855f7', bg: 'rgba(168,85,247,0.1)', border: 'rgba(168,85,247,0.2)', label: 'Quest Master' },
+                  BONUS:           { icon: '⭐', color: '#f5c518', bg: 'rgba(245,197,24,0.1)', border: 'rgba(245,197,24,0.2)', label: 'Bonus' },
+                };
+                const cfg = typeConfig[r.type] || typeConfig['BONUS'];
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: '#1a1a1a', borderRadius: '12px', border: '1px solid ' + cfg.border }}>
+                    <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: cfg.bg, border: '1px solid ' + cfg.border, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>{cfg.icon}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.description || cfg.label}</div>
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '3px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '11px', color: '#555' }}>{new Date(r.earnedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                        <span style={{ fontSize: '11px', padding: '0 6px', borderRadius: '999px', background: cfg.bg, color: cfg.color, fontWeight: 600 }}>{cfg.label}</span>
+                      </div>
+                    </div>
+                    {r.coinsEarned > 0 && (
+                      <div style={{ background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: '8px', padding: '4px 10px', color: '#f5c518', fontWeight: 700, fontSize: '13px', flexShrink: 0 }}>+{r.coinsEarned}🪙</div>
+                    )}
+                    {r.type === 'QUEST_MASTER' && (
+                      <div style={{ background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.2)', borderRadius: '8px', padding: '4px 10px', color: '#a855f7', fontWeight: 700, fontSize: '12px', flexShrink: 0 }}>🏆 Badge</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#a0a0a0', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Redemption History</h3>
+          <div style={{ marginBottom: '16px' }}>
+            <select className="input" value={selectedGroup} onChange={e => setSelectedGroup(e.target.value)} style={{ fontSize: '13px', maxWidth: '240px' }}>
               {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
             </select>
           </div>
-
           {redeemHistory.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 20px', background: '#1a1a1a', borderRadius: '16px', border: '1px dashed #2a2a2a' }}>
-              <div style={{ fontSize: '40px', marginBottom: '12px' }}>🧾</div>
-              <p style={{ color: '#fff', fontWeight: 700, marginBottom: '6px' }}>No redemptions yet</p>
-              <p style={{ color: '#a0a0a0', fontSize: '13px' }}>Redeem coins to see history here.</p>
+            <div style={{ textAlign: 'center', padding: '40px', background: '#1a1a1a', borderRadius: '12px', border: '1px dashed #2a2a2a' }}>
+              <p style={{ color: '#a0a0a0', fontSize: '13px' }}>No redemptions yet for this group.</p>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {redeemHistory.map((r, i) => (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'center', gap: '14px',
-                  padding: '14px 18px', background: '#1a1a1a', borderRadius: '14px', border: '1px solid #2a2a2a',
-                }}>
-                  <div style={{
-                    width: '40px', height: '40px', borderRadius: '10px',
-                    background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0,
-                  }}>🎁</div>
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: '#1a1a1a', borderRadius: '12px', border: '1px solid #2a2a2a' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}>🎁</div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '14px', fontWeight: 600, color: '#fff' }}>{r.description}</div>
-                    <div style={{ fontSize: '12px', color: '#a0a0a0', marginTop: '2px' }}>
-                      {new Date(r.earnedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff' }}>{r.description}</div>
+                    <div style={{ fontSize: '11px', color: '#555', marginTop: '3px' }}>{new Date(r.earnedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
                   </div>
-                  <div style={{
-                    background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)',
-                    borderRadius: '8px', padding: '4px 10px',
-                    color: '#ef4444', fontWeight: 700, fontSize: '13px', flexShrink: 0,
-                  }}>−{Math.abs(r.coinsEarned)}🪙</div>
+                  <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '4px 10px', color: '#ef4444', fontWeight: 700, fontSize: '13px', flexShrink: 0 }}>-{Math.abs(r.coinsEarned)}🪙</div>
                 </div>
               ))}
             </div>
@@ -355,7 +391,6 @@ export default function RewardsPage() {
         </div>
       )}
 
-      {/* ── MY REWARDS TAB ── */}
       {activeTab === 'REWARDS' && (
         <div>
           {redeemRewards.length === 0 ? (

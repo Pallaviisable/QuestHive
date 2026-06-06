@@ -446,7 +446,7 @@ export default function GroupTasksPage() {
                     {isAssignedToMe && task.status !== 'COMPLETED' && !task.personal && (
                       <button onClick={() => denyTask(task.id).then(fetchData)} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '8px', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>❌</button>
                     )}
-                    {isCreator && task.status !== 'COMPLETED' && (
+                    {(isCreator || isAdmin) && task.status !== 'COMPLETED' && (
                       <>
                         <button onClick={() => openEditModal(task)} style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#3b82f6', borderRadius: '8px', padding: '6px 8px', fontSize: '13px', cursor: 'pointer' }}>✏️</button>
                         <button onClick={() => deleteTask(task.id).then(fetchData)} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '8px', padding: '6px 8px', fontSize: '13px', cursor: 'pointer' }}>🗑️</button>

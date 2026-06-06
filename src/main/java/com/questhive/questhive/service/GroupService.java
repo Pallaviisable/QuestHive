@@ -8,6 +8,7 @@ import com.questhive.questhive.model.Invite;
 import com.questhive.questhive.model.User;
 import com.questhive.questhive.repository.GroupActivityRepository;
 import com.questhive.questhive.repository.GroupRepository;
+import com.questhive.questhive.repository.TaskRepository;
 import com.questhive.questhive.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,11 +29,11 @@ public class GroupService {
     private final EmailService emailService;
     private final GroupActivityRepository groupActivityRepository;
     private final InviteService inviteService;
+    private final TaskRepository taskRepository;
 
     @Value("${questhive.frontend.url}")
     private String frontendUrl;
 
-    // ── Templates ─────────────────────────────────────────────────────────────
     private static final List<String> FAMILY_CATEGORIES =
             Arrays.asList("Household", "School", "Personal", "Groceries", "Health");
 
@@ -41,11 +42,12 @@ public class GroupService {
         group.setName(name);
         group.setDescription(description);
         group.setAdminId(adminId);
-        group.setInviteCode(generateUniqueInviteCode());
         group.setMemberIds(new ArrayList<>(List.of(adminId)));
         group.setDeactivatedMemberIds(new ArrayList<>());
         group.setCreatedAt(LocalDateTime.now());
+        group.setLastActivityAt(LocalDateTime.now());
 
+        // Bug #5 fix: template properly sets categories
         if ("FAMILY".equalsIgnoreCase(template)) {
             group.setTemplate("FAMILY");
             group.setTaskCategories(new ArrayList<>(FAMILY_CATEGORIES));
@@ -57,7 +59,7 @@ public class GroupService {
         return groupRepository.save(group);
     }
 
-    // ── Invite by email: now sends registration link ──────────────────────────
+    // Enhancement #9: "member already present" message
     public void inviteByEmail(String adminId, String groupId, String targetEmail) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("Group not found."));
@@ -65,25 +67,21 @@ public class GroupService {
             throw new RuntimeException("Only the group admin can invite members.");
         }
 
-        // Reject if already a member
         userRepository.findByEmail(targetEmail).ifPresent(existingUser -> {
             if (group.getMemberIds().contains(existingUser.getId())) {
-                throw new RuntimeException(
-                        targetEmail + " is already a member of this group.");
+                throw new RuntimeException("This member is already present in the group.");
             }
         });
 
-        // Create invite token and send registration link
         Invite invite = inviteService.createMemberInvite(targetEmail, groupId, adminId);
         String inviteLink = frontendUrl + "/invite-preview?token=" + invite.getToken();
         emailService.sendMemberInviteLink(targetEmail, group.getName(), inviteLink);
-
-        logActivity(groupId, "INVITE_SENT", null, null,
-                "Invite sent to " + targetEmail, 0);
+        logActivity(groupId, "INVITE_SENT", null, null, "Invite sent to " + targetEmail, 0);
+        updateLastActivity(groupId);
     }
 
-    // ── Deactivate / reactivate member in group ───────────────────────────────
-    public void deactivateMember(String adminId, String groupId, String targetUserId) {
+    // Enhancement #3 + #4: deactivate with reason, send email
+    public void deactivateMember(String adminId, String groupId, String targetUserId, String reason) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("Group not found."));
         if (!group.getAdminId().equals(adminId)) {
@@ -96,9 +94,12 @@ public class GroupService {
         if (!group.getDeactivatedMemberIds().contains(targetUserId)) {
             group.getDeactivatedMemberIds().add(targetUserId);
             groupRepository.save(group);
-            userRepository.findById(targetUserId).ifPresent(target ->
-                    logActivity(groupId, "MEMBER_DEACTIVATED", null, target.getFullName(),
-                            target.getFullName() + " was deactivated in this group", 0));
+            userRepository.findById(targetUserId).ifPresent(target -> {
+                logActivity(groupId, "MEMBER_DEACTIVATED", null, target.getFullName(),
+                        target.getFullName() + " was deactivated in this group", 0);
+                emailService.sendMemberDeactivatedInGroup(
+                        target.getEmail(), target.getFullName(), group.getName(), reason);
+            });
         }
     }
 
@@ -114,8 +115,6 @@ public class GroupService {
         }
     }
 
-    // ── All existing methods below — unchanged ────────────────────────────────
-
     public Group joinByInviteCode(String userId, String inviteCode) {
         Group group = groupRepository.findByInviteCode(inviteCode)
                 .orElseThrow(() -> new RuntimeException("Invalid invite code."));
@@ -124,6 +123,7 @@ public class GroupService {
         }
         group.getMemberIds().add(userId);
         groupRepository.save(group);
+        updateLastActivity(group.getId());
         userRepository.findById(userId).ifPresent(user ->
                 logActivity(group.getId(), "MEMBER_JOINED", user.getFullName(),
                         null, "joined the group", 0));
@@ -156,8 +156,11 @@ public class GroupService {
         dto.setDescription(group.getDescription());
         dto.setAdminId(group.getAdminId());
         dto.setInviteCode(group.getInviteCode());
+        dto.setTemplate(group.getTemplate());
+        dto.setTaskCategories(group.getTaskCategories());
         dto.setCreatedAt(group.getCreatedAt());
         dto.setMembers(members);
+        dto.setDeactivatedMemberIds(group.getDeactivatedMemberIds());
         return dto;
     }
 
@@ -211,6 +214,12 @@ public class GroupService {
         groupRepository.delete(group);
     }
 
+    // Enhancement #8: delete all groups when admin user is deleted
+    public void deleteAllGroupsByAdmin(String adminId) {
+        List<Group> adminGroups = groupRepository.findByAdminId(adminId);
+        groupRepository.deleteAll(adminGroups);
+    }
+
     public Group regenerateInviteCode(String adminId, String groupId) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("Group not found."));
@@ -223,6 +232,14 @@ public class GroupService {
 
     public List<GroupActivity> getGroupActivities(String groupId) {
         return groupActivityRepository.findByGroupIdOrderByCreatedAtDesc(groupId);
+    }
+
+    // New Feature #2: update last activity timestamp
+    public void updateLastActivity(String groupId) {
+        groupRepository.findById(groupId).ifPresent(group -> {
+            group.setLastActivityAt(LocalDateTime.now());
+            groupRepository.save(group);
+        });
     }
 
     private String generateUniqueInviteCode() {

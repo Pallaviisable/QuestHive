@@ -27,15 +27,15 @@ public class User {
     private int streak;
     private boolean isVerified = false;
     private boolean usernameChanged = false;
+    private boolean reminderSent = false;
     private LocalDateTime lastTaskCompletedAt;
     private LocalDateTime createdAt;
     private String otpCode;
     private LocalDateTime otpExpiry;
     private String pendingEmail;
 
-    // Week 1 additions
-    private String role = "MEMBER";       // SUPER_ADMIN, FAMILY_ADMIN, MEMBER
-    private String status = "ACTIVE";     // ACTIVE, DEACTIVATED
+    private String role = "MEMBER";
+    private String status = "ACTIVE";
     private boolean hasSeenTour = false;
 
     public User() {
@@ -47,5 +47,6 @@ public class User {
         this.role = "MEMBER";
         this.status = "ACTIVE";
         this.hasSeenTour = false;
+        this.reminderSent = false;
     }
 }

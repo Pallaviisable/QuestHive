@@ -3,7 +3,6 @@ package com.questhive.questhive.controller;
 import com.questhive.questhive.dto.GroupDetailDTO;
 import com.questhive.questhive.model.Group;
 import com.questhive.questhive.model.GroupActivity;
-import com.questhive.questhive.model.Task;
 import com.questhive.questhive.repository.TaskRepository;
 import com.questhive.questhive.service.GroupService;
 import com.questhive.questhive.util.JwtUtil;
@@ -31,11 +30,9 @@ public class GroupController {
     public ResponseEntity<Group> createGroup(
             @RequestHeader("Authorization") String auth,
             @RequestBody Map<String, String> body) {
-        String userId = extractUserId(auth);
-        // template defaults to CUSTOM if not provided
         String template = body.getOrDefault("template", "CUSTOM");
         return ResponseEntity.ok(
-                groupService.createGroup(userId, body.get("name"), body.get("description"), template));
+                groupService.createGroup(extractUserId(auth), body.get("name"), body.get("description"), template));
     }
 
     @PostMapping("/join")
@@ -50,18 +47,24 @@ public class GroupController {
             @RequestHeader("Authorization") String auth,
             @PathVariable String groupId,
             @RequestBody Map<String, String> body) {
-        groupService.inviteByEmail(extractUserId(auth), groupId, body.get("email"));
-        return ResponseEntity.ok(Map.of("message", "Invite link sent successfully."));
+        try {
+            groupService.inviteByEmail(extractUserId(auth), groupId, body.get("email"));
+            return ResponseEntity.ok(Map.of("message", "Invite link sent successfully."));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
-    // NEW — deactivate / reactivate a member within this group
+    // Enhancement #3 + #4: deactivate now accepts reason in body
     @PostMapping("/{groupId}/members/{memberId}/deactivate")
     public ResponseEntity<?> deactivateMember(
             @RequestHeader("Authorization") String auth,
             @PathVariable String groupId,
-            @PathVariable String memberId) {
+            @PathVariable String memberId,
+            @RequestBody(required = false) Map<String, String> body) {
         try {
-            groupService.deactivateMember(extractUserId(auth), groupId, memberId);
+            String reason = body != null ? body.getOrDefault("reason", "") : "";
+            groupService.deactivateMember(extractUserId(auth), groupId, memberId, reason);
             return ResponseEntity.ok(Map.of("message", "Member deactivated in this group."));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -144,16 +147,13 @@ public class GroupController {
                         && t.getDeadline() != null
                         && t.getDeadline().isBefore(java.time.LocalDateTime.now()))
                 .count();
-
         int healthPercent = total == 0 ? 100 : (int) ((completed * 100.0) / total);
         String status = healthPercent >= 75 ? "HEALTHY" : healthPercent >= 40 ? "AT_RISK" : "CRITICAL";
-
-        return ResponseEntity.ok(java.util.Map.of(
+        return ResponseEntity.ok(Map.of(
                 "total", total,
                 "completed", completed,
                 "overdue", overdue,
                 "healthPercent", healthPercent,
-                "status", status
-        ));
+                "status", status));
     }
 }

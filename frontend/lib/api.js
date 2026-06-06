@@ -23,6 +23,7 @@ API.interceptors.request.use((config) => {
 /* AUTH */
 export const login = (data) => API.post('/auth/login', data);
 export const forgotPassword = (email) => API.post('/auth/forgot-password', { email });
+export const resendOtp = (email) => API.post('/auth/resend-otp', { email });
 export const resetPassword = (data) => API.post('/auth/reset-password', data);
 export const verifyEmail = (data) => API.post('/auth/verify-email', data);
 export const updateProfile = (data) => API.put('/auth/profile', data);
@@ -45,7 +46,7 @@ export const getGroupDetail = (groupId) => API.get(`/groups/${groupId}/detail`);
 export const inviteByEmail = (groupId, email) => API.post(`/groups/${groupId}/invite-email`, { email });
 export const leaveGroup = (groupId) => API.post(`/groups/${groupId}/leave`);
 export const removeMember = (groupId, memberId) => API.delete(`/groups/${groupId}/members/${memberId}`);
-export const deactivateMember = (groupId, memberId) => API.post(`/groups/${groupId}/members/${memberId}/deactivate`);
+export const deactivateMember = (groupId, memberId, reason = '') => API.post(`/groups/${groupId}/members/${memberId}/deactivate`, { reason });
 export const reactivateMember = (groupId, memberId) => API.post(`/groups/${groupId}/members/${memberId}/reactivate`);
 export const deleteGroup = (groupId) => API.delete(`/groups/${groupId}`);
 export const regenerateCode = (groupId) => API.post(`/groups/${groupId}/regenerate-code`);
@@ -87,9 +88,9 @@ export const getRedeemHistory = (groupId) => API.get(`/rewards/group/${groupId}/
 export const getSuperAdminRequests = () => API.get('/superadmin/requests');
 export const getAllSuperAdminRequests = () => API.get('/superadmin/requests/all');
 export const approveAdminRequest = (requestId) => API.post(`/superadmin/requests/${requestId}/approve`);
-export const rejectAdminRequest = (requestId) => API.post(`/superadmin/requests/${requestId}/reject`);
+export const rejectAdminRequest = (requestId, reason = '') => API.post(`/superadmin/requests/${requestId}/reject`, { reason });
 export const getSuperAdminUsers = () => API.get('/superadmin/users');
-export const deactivatePlatformUser = (userId) => API.post(`/superadmin/users/${userId}/deactivate`);
+export const deactivatePlatformUser = (userId, reason = '') => API.post(`/superadmin/users/${userId}/deactivate`, { reason });
 export const activatePlatformUser = (userId) => API.post(`/superadmin/users/${userId}/activate`);
 export const removePlatformUser = (userId) => API.delete(`/superadmin/users/${userId}`);
 
@@ -128,4 +129,3 @@ export const getPlatformAnalytics = () => API.get('/analytics/platform');
 export const requestBonusReview = (taskId, bonusCoins) => API.post(`/fairness/tasks/${taskId}/bonus-review`, { bonusCoins });
 export const flagBonus = (taskId) => API.post(`/fairness/tasks/${taskId}/flag-bonus`);
 export const getReviewStatus = (taskId) => API.get(`/fairness/tasks/${taskId}/review-status`);
-
