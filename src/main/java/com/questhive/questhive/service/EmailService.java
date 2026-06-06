@@ -3,10 +3,12 @@ package com.questhive.questhive.service;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.*;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 @Service
 @RequiredArgsConstructor
@@ -14,19 +16,48 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
+    @Value("${spring.mail.username:}")
     private String senderEmail;
+
+    @Value("${brevo.api.key:}")
+    private String brevoApiKey;
+
+    @Value("${brevo.sender.email:}")
+    private String brevoSenderEmail;
+
+    private static final String BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
     private void sendEmail(String toEmail, String subject, String htmlContent) {
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(senderEmail, "QuestHive");
-            helper.setTo(toEmail);
-            helper.setSubject(subject);
-            helper.setText(htmlContent, true);
-            mailSender.send(message);
-            System.out.println("EMAIL SUCCESS: Sent to " + toEmail);
+            if (brevoApiKey != null && !brevoApiKey.isEmpty()) {
+                // Render: use Brevo REST API over HTTPS
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                String from = (brevoSenderEmail != null && !brevoSenderEmail.isEmpty()) ? brevoSenderEmail : senderEmail;
+                java.util.Map<String, Object> payload = java.util.Map.of(
+                    "sender", java.util.Map.of("email", from, "name", "QuestHive"),
+                    "to", java.util.List.of(java.util.Map.of("email", toEmail)),
+                    "subject", subject,
+                    "htmlContent", htmlContent
+                );
+                String body = mapper.writeValueAsString(payload);
+                RestTemplate restTemplate = new RestTemplate();
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("api-key", brevoApiKey);
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                HttpEntity<String> entity = new HttpEntity<>(body, headers);
+                ResponseEntity<String> response = restTemplate.postForEntity(BREVO_API_URL, entity, String.class);
+                System.out.println("EMAIL SUCCESS (Brevo API): Sent to " + toEmail + " | Status: " + response.getStatusCode());
+            } else {
+                // Local: use JavaMailSender (Gmail SMTP)
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+                helper.setFrom(senderEmail, "QuestHive");
+                helper.setTo(toEmail);
+                helper.setSubject(subject);
+                helper.setText(htmlContent, true);
+                mailSender.send(message);
+                System.out.println("EMAIL SUCCESS (SMTP): Sent to " + toEmail);
+            }
         } catch (Exception e) {
             System.out.println("EMAIL FAILED: " + e.getMessage());
             e.printStackTrace();
