@@ -1,50 +1,37 @@
 package com.questhive.questhive.service;
 
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 @Service
 @RequiredArgsConstructor
 public class EmailService {
 
-    @Value("${brevo.api.key}")
-    private String brevoApiKey;
+    private final JavaMailSender mailSender;
 
-    @Value("${brevo.sender.email}")
+    @Value("${spring.mail.username}")
     private String senderEmail;
-
-    private static final String BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
     private void sendEmail(String toEmail, String subject, String htmlContent) {
         try {
-            RestTemplate restTemplate = new RestTemplate();
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("api-key", brevoApiKey);
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            String safeSubject = subject.replace("\"", "\\\"");
-            String safeHtml = htmlContent.replace("\\", "\\\\").replace("\"", "\\\"");
-
-            String body = "{"
-                    + "\"sender\": {\"email\": \"" + senderEmail + "\", \"name\": \"QuestHive\"},"
-                    + "\"to\": [{\"email\": \"" + toEmail + "\"}],"
-                    + "\"subject\": \"" + safeSubject + "\","
-                    + "\"htmlContent\": \"" + safeHtml + "\""
-                    + "}";
-
-            HttpEntity<String> entity = new HttpEntity<>(body, headers);
-            ResponseEntity<String> response = restTemplate.postForEntity(BREVO_API_URL, entity, String.class);
-            System.out.println("EMAIL SUCCESS: Sent to " + toEmail + " | Status: " + response.getStatusCode());
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(senderEmail, "QuestHive");
+            helper.setTo(toEmail);
+            helper.setSubject(subject);
+            helper.setText(htmlContent, true);
+            mailSender.send(message);
+            System.out.println("EMAIL SUCCESS: Sent to " + toEmail);
         } catch (Exception e) {
             System.out.println("EMAIL FAILED: " + e.getMessage());
             e.printStackTrace();
         }
     }
-
     private String baseTemplate(String title, String bodyContent) {
         return "<div style='font-family:Inter,sans-serif;background:#0f0f0f;padding:40px 0;min-height:100vh'>"
              + "<div style='max-width:520px;margin:0 auto;background:#1a1a1a;border-radius:16px;border:1px solid #2a2a2a;overflow:hidden'>"
