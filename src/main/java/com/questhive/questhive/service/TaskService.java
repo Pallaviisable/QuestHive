@@ -8,6 +8,7 @@ import com.questhive.questhive.model.Task.Status;
 import com.questhive.questhive.model.Task.Category;
 import com.questhive.questhive.model.User;
 import com.questhive.questhive.repository.GroupActivityRepository;
+import com.questhive.questhive.service.NotificationService;
 import com.questhive.questhive.repository.GroupRepository;
 import com.questhive.questhive.repository.TaskRepository;
 import com.questhive.questhive.repository.UserRepository;
@@ -25,6 +26,7 @@ public class TaskService {
     private final GroupRepository groupRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final NotificationService notificationService;
     private final RewardService rewardService;
     private final XpService xpService;
     private final GroupActivityRepository groupActivityRepository;
@@ -67,6 +69,8 @@ public class TaskService {
                             assignee.getEmail(), assigner.getFullName(), title,
                             priority.name(), deadline != null ? deadline.toString() : "No deadline");
                     logActivity(groupId, "TASK_ASSIGNED", assigner.getFullName(), assignee.getFullName(), title, 0);
+                    notificationService.sendNotification(finalAssignedToId, "📋 New Task Assigned",
+                        assigner.getFullName() + " assigned you: " + title, "TASK_ASSIGNED", groupId, saved.getId());
                 })
             );
         } else {
@@ -125,6 +129,15 @@ public class TaskService {
                             : "missed pledge on task: " + task.getTitle();
                         logActivity(task.getGroupId(), pledgeType, user.getFullName(), null, pledgeDetail, 0);
                     }
+                    // Notify all group members
+                    groupRepository.findById(task.getGroupId()).ifPresent(group ->
+                        group.getMemberIds().stream()
+                            .filter(mid -> !mid.equals(userId))
+                            .forEach(mid -> notificationService.sendNotification(mid,
+                                "✅ Task Completed",
+                                user.getFullName() + " completed: " + task.getTitle(),
+                                "TASK_COMPLETED", task.getGroupId(), task.getId()))
+                    );
                 });
             }
         }
@@ -141,6 +154,10 @@ public class TaskService {
         task.setAssignedToId(userId);
         userRepository.findById(userId).ifPresent(user ->
             logActivity(task.getGroupId(), "TASK_CLAIMED", user.getFullName(), null, task.getTitle(), 0));
+        userRepository.findById(userId).ifPresent(claimer ->
+            notificationService.sendNotification(task.getAssignedById(), "🙋 Task Claimed",
+                claimer.getFullName() + " claimed: " + task.getTitle(),
+                "TASK_CLAIMED", task.getGroupId(), task.getId()));
         return taskRepository.save(task);
     }
 
@@ -377,6 +394,12 @@ public class TaskService {
         comment.setContent(content);
         comment.setCreatedAt(LocalDateTime.now());
         task.getComments().add(comment);
+        // Notify assignee if commenter is not assignee
+        if (task.getAssignedToId() != null && !task.getAssignedToId().equals(userId)) {
+            notificationService.sendNotification(task.getAssignedToId(), "💬 New Comment",
+                user.getFullName() + " commented on: " + task.getTitle(),
+                "TASK_COMMENT", task.getGroupId(), taskId);
+        }
         return taskRepository.save(task);
     }
 
@@ -396,11 +419,20 @@ public class TaskService {
         task.setPledgedAt(LocalDateTime.now());
         task.setPledgedByUserId(userId);
         Task saved = taskRepository.save(task);
-        // Log pledge in group activity feed
+        // Log pledge in group activity feed + notify group members
         if (task.getGroupId() != null) {
-            userRepository.findById(userId).ifPresent(user ->
+            userRepository.findById(userId).ifPresent(user -> {
                 logActivity(task.getGroupId(), "PLEDGE_MADE", user.getFullName(), null,
-                    "pledged on task: " + task.getTitle(), 0));
+                    "pledged on task: " + task.getTitle(), 0);
+                groupRepository.findById(task.getGroupId()).ifPresent(group ->
+                    group.getMemberIds().stream()
+                        .filter(mid -> !mid.equals(userId))
+                        .forEach(mid -> notificationService.sendNotification(mid,
+                            "🤝 New Pledge",
+                            user.getFullName() + " pledged on: " + task.getTitle(),
+                            "PLEDGE_MADE", task.getGroupId(), taskId))
+                );
+            });
         }
         return saved;
     }

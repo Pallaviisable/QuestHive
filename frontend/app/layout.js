@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { getNotifications, markAllRead, markNotificationRead } from '@/lib/api';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import './globals.css';
@@ -48,6 +49,11 @@ export default function RootLayout({ children }) {
   const [coins, setCoins] = useState(0);
   const [isNavigating, setIsNavigating] = useState(false);
   const [toast, setToast] = useState('');
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+  const notifRef = useRef(null);
+  const stompRef = useRef(null);
 
   const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/request-access', '/invite-preview', '/superadmin'];
   const isAuthPage = authRoutes.some(route => pathname.startsWith(route));
@@ -59,6 +65,38 @@ export default function RootLayout({ children }) {
       try { setUser(JSON.parse(stored)); } catch (e) { localStorage.removeItem('user'); }
     }
     if (!token && !isAuthPage) router.push('/login');
+
+    // Fetch notifications
+    const token = localStorage.getItem('token');
+    const storedUser = stored ? (() => { try { return JSON.parse(stored); } catch(e) { return null; } })() : null;
+    if (token && storedUser) {
+      getNotifications().then(res => {
+        setNotifications(res.data);
+        setUnreadCount(res.data.filter(n => !n.read).length);
+      }).catch(() => {});
+
+      // WebSocket for real-time notifications
+      if (!stompRef.current && typeof window !== 'undefined') {
+        import('sockjs-client').then(({ default: SockJS }) =>
+          import('@stomp/stompjs').then(({ Client }) => {
+            const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+            const client = new Client({
+              webSocketFactory: () => new SockJS(`${backendUrl}/ws`),
+              reconnectDelay: 5000,
+              onConnect: () => {
+                client.subscribe(`/topic/notifications/${storedUser.id}`, (msg) => {
+                  const notif = JSON.parse(msg.body);
+                  setNotifications(prev => [notif, ...prev]);
+                  setUnreadCount(prev => prev + 1);
+                });
+              },
+            });
+            client.activate();
+            stompRef.current = client;
+          })
+        );
+      }
+    }
 
     const loginSuccess = localStorage.getItem('loginSuccess');
     if (loginSuccess) {
@@ -78,6 +116,25 @@ export default function RootLayout({ children }) {
     const t = setTimeout(() => setIsNavigating(false), 600);
     return () => clearTimeout(t);
   }, [pathname]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        setShowNotifDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleOpenNotifications = async () => {
+    setShowNotifDropdown(v => !v);
+    if (!showNotifDropdown && unreadCount > 0) {
+      await markAllRead().catch(() => {});
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+    }
+  };
 
   const handleLogout = () => {
     localStorage.clear();
@@ -173,6 +230,68 @@ export default function RootLayout({ children }) {
                 <span style={{ color: '#f5c518', fontWeight: 700, fontSize: '14px' }}>{coins}</span>
               </div>
             )}
+            {/* Bell Notification Icon */}
+            {!isSuperAdmin && (
+              <div ref={notifRef} style={{ position: 'relative' }}>
+                <button onClick={handleOpenNotifications} style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: '#a0a0a0', padding: '6px', borderRadius: '8px',
+                  display: 'flex', alignItems: 'center', position: 'relative',
+                  transition: 'color 0.2s',
+                }} onMouseEnter={e => e.currentTarget.style.color='#f5c518'}
+                   onMouseLeave={e => e.currentTarget.style.color='#a0a0a0'}>
+                  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/>
+                  </svg>
+                  {unreadCount > 0 && (
+                    <span style={{
+                      position: 'absolute', top: '2px', right: '2px',
+                      background: '#ef4444', color: '#fff',
+                      borderRadius: '999px', fontSize: '10px', fontWeight: 700,
+                      minWidth: '16px', height: '16px',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      padding: '0 3px', lineHeight: 1,
+                    }}>{unreadCount > 99 ? '99+' : unreadCount}</span>
+                  )}
+                </button>
+
+                {showNotifDropdown && (
+                  <div style={{
+                    position: 'absolute', top: '44px', right: 0,
+                    width: '320px', maxHeight: '420px',
+                    background: '#1a1a1a', border: '1px solid #2a2a2a',
+                    borderRadius: '14px', overflow: 'hidden',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)', zIndex: 999,
+                  }}>
+                    <div style={{ padding: '14px 16px', borderBottom: '1px solid #2a2a2a', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 700, color: '#fff', fontSize: '14px' }}>🔔 Notifications</span>
+                      <span style={{ fontSize: '11px', color: '#555' }}>{notifications.filter(n=>!n.read).length === 0 ? 'All caught up!' : `${notifications.filter(n=>!n.read).length} unread`}</span>
+                    </div>
+                    <div style={{ overflowY: 'auto', maxHeight: '360px' }}>
+                      {notifications.length === 0 ? (
+                        <div style={{ padding: '32px', textAlign: 'center', color: '#555', fontSize: '13px' }}>
+                          No notifications yet 🐝
+                        </div>
+                      ) : notifications.slice(0, 30).map(n => (
+                        <div key={n.id} style={{
+                          padding: '12px 16px', borderBottom: '1px solid #222',
+                          background: n.read ? 'transparent' : 'rgba(245,197,24,0.04)',
+                          cursor: 'pointer', transition: 'background 0.2s',
+                        }} onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.04)'}
+                           onMouseLeave={e => e.currentTarget.style.background = n.read ? 'transparent' : 'rgba(245,197,24,0.04)'}>
+                          <div style={{ fontWeight: 600, fontSize: '13px', color: '#fff', marginBottom: '3px' }}>{n.title}</div>
+                          <div style={{ fontSize: '12px', color: '#a0a0a0', lineHeight: 1.4 }}>{n.body}</div>
+                          <div style={{ fontSize: '11px', color: '#555', marginTop: '4px' }}>
+                            {new Date(n.createdAt).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <div style={{
                 width: '32px', height: '32px', borderRadius: '50%',

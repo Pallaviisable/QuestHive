@@ -129,3 +129,9 @@ export const getPlatformAnalytics = () => API.get('/analytics/platform');
 export const requestBonusReview = (taskId, bonusCoins) => API.post(`/fairness/tasks/${taskId}/bonus-review`, { bonusCoins });
 export const flagBonus = (taskId) => API.post(`/fairness/tasks/${taskId}/flag-bonus`);
 export const getReviewStatus = (taskId) => API.get(`/fairness/tasks/${taskId}/review-status`);
+
+// Notifications
+export const getNotifications = () => api.get('/notifications');
+export const getUnreadCount = () => api.get('/notifications/unread-count');
+export const markAllRead = () => api.post('/notifications/mark-all-read');
+export const markNotificationRead = (id) => api.post(`/notifications/${id}/read`);
