@@ -40,12 +40,13 @@ export default function LoginPage() {
     }}>
       {/* Left panel */}
       <div style={{
-        flex: '0 0 420px',
+        flex: '0 0 440px',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
-        padding: '64px 48px',
+        padding: '0 56px',
         borderRight: '1px solid var(--border)',
+        minHeight: '100vh',
       }}>
         <div style={{ marginBottom: '48px' }}>
           <div style={{
@@ -185,55 +186,95 @@ export default function LoginPage() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '64px',
+        padding: '60px 64px',
         background: 'var(--bg-card)',
         position: 'relative',
         overflow: 'hidden',
       }}>
-        <div style={{
-          position: 'absolute', top: -120, right: -120,
-          width: '400px', height: '400px',
-          background: 'radial-gradient(circle, rgba(245,197,24,0.06) 0%, transparent 70%)',
-          borderRadius: '50%',
-        }} />
-        <div style={{
-          position: 'absolute', bottom: -80, left: -80,
-          width: '300px', height: '300px',
-          background: 'radial-gradient(circle, rgba(168,85,247,0.05) 0%, transparent 70%)',
-          borderRadius: '50%',
-        }} />
+        {/* Background glows */}
+        <div style={{ position: 'absolute', top: -100, right: -100, width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(245,197,24,0.07) 0%, transparent 65%)', borderRadius: '50%', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: -60, left: -60, width: '350px', height: '350px', background: 'radial-gradient(circle, rgba(99,102,241,0.06) 0%, transparent 65%)', borderRadius: '50%', pointerEvents: 'none' }} />
 
-        <div style={{ position: 'relative', maxWidth: '380px', textAlign: 'center' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: 'rgba(245,197,24,0.08)',
-            border: '1px solid rgba(245,197,24,0.15)',
-            borderRadius: '999px',
-            padding: '6px 14px',
-            marginBottom: '28px',
-          }}>
-            <span style={{ width: '6px', height: '6px', background: 'var(--accent)', borderRadius: '50%', display: 'inline-block' }} />
-            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--accent)' }}>Task management, gamified</span>
+        <div style={{ position: 'relative', width: '100%', maxWidth: '460px' }}>
+
+          {/* Badge */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: 'rgba(245,197,24,0.08)', border: '1px solid rgba(245,197,24,0.2)', borderRadius: '999px', padding: '5px 14px', marginBottom: '24px' }}>
+            <span style={{ width: '6px', height: '6px', background: 'var(--accent)', borderRadius: '50%', display: 'inline-block', boxShadow: '0 0 6px var(--accent)' }} />
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--accent)', letterSpacing: '0.2px' }}>Task management, gamified</span>
           </div>
 
-          <h2 style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '16px', letterSpacing: '-0.5px', lineHeight: 1.3 }}>
+          <h2 style={{ fontSize: '32px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '12px', letterSpacing: '-0.8px', lineHeight: 1.2 }}>
             Assign tasks.<br/>Track progress.<br/>Earn rewards.
           </h2>
-          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '40px' }}>
-            QuestHive turns everyday responsibilities into quests your team actually wants to complete.
+          <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: '36px', maxWidth: '360px' }}>
+            Turn everyday responsibilities into quests your team actually wants to complete.
           </p>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left' }}>
+          {/* Mock dashboard preview card */}
+          <div style={{
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border)',
+            borderRadius: '16px',
+            padding: '20px',
+            marginBottom: '28px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
+          }}>
+            {/* Mini stat row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: '16px' }}>
+              {[
+                { label: 'Tasks Done', value: '23', color: 'var(--success)' },
+                { label: 'Coins Earned', value: '175', color: 'var(--accent)' },
+                { label: 'Streak', value: '5d', color: '#f97316' },
+              ].map((s, i) => (
+                <div key={i} style={{ background: 'var(--bg-card)', borderRadius: '10px', padding: '12px', textAlign: 'center', border: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: s.color }}>{s.value}</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', fontWeight: 600 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Mini task list */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {[
+                { title: 'Review pull request', status: 'DONE', coin: 20 },
+                { title: 'Write unit tests', status: 'PROGRESS', coin: 15 },
+                { title: 'Update documentation', status: 'PENDING', coin: 10 },
+              ].map((t, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                  <div style={{
+                    width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0,
+                    background: t.status === 'DONE' ? 'var(--success)' : t.status === 'PROGRESS' ? 'var(--info)' : 'var(--text-muted)',
+                  }} />
+                  <span style={{ flex: 1, fontSize: '12px', color: t.status === 'DONE' ? 'var(--text-muted)' : 'var(--text-secondary)', textDecoration: t.status === 'DONE' ? 'line-through' : 'none' }}>{t.title}</span>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent)' }}>+{t.coin}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* XP bar */}
+            <div style={{ marginTop: '14px', padding: '10px 12px', background: 'var(--bg-card)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent)' }}>Level 4 — Explorer</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>340 / 500 XP</span>
+              </div>
+              <div style={{ background: 'var(--bg-elevated)', borderRadius: '999px', height: '5px', overflow: 'hidden' }}>
+                <div style={{ width: '68%', height: '100%', background: 'linear-gradient(90deg, var(--accent), #ffdd57)', borderRadius: '999px' }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Feature bullets */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {[
-              { icon: '◆', label: 'Group task management with role-based permissions' },
-              { icon: '◆', label: 'XP levels, coins, and reward redemption' },
-              { icon: '◆', label: 'Real-time leaderboards and group health tracking' },
+              { label: 'Role-based task management for groups' },
+              { label: 'XP system, coins, streaks and badge rewards' },
+              { label: 'Leaderboards, group health and analytics' },
             ].map((item, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                <span style={{ color: 'var(--accent)', fontSize: '8px', marginTop: '5px', flexShrink: 0 }}>{item.icon}</span>
-                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{item.label}</span>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '18px', height: '18px', borderRadius: '5px', background: 'rgba(245,197,24,0.12)', border: '1px solid rgba(245,197,24,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="10" height="10" fill="none" stroke="var(--accent)" strokeWidth="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{item.label}</span>
               </div>
             ))}
           </div>
