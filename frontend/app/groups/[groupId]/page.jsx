@@ -25,6 +25,10 @@ const activityIcon = {
   MEMBER_REMOVED: '🚫',
   OPEN_TASK_REMINDER: '⏰',
   OPEN_TASK_PENALTY: '⚠️',
+,
+  PLEDGE_MADE: '🤝',
+  PLEDGE_FULFILLED: '✅',
+  PLEDGE_MISSED: '❌',
 };
 
 export default function GroupDetailPage() {

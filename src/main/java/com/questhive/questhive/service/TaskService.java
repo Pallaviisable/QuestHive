@@ -114,8 +114,18 @@ public class TaskService {
                     default     -> 10;
                 };
                 xpService.awardXp(userId, task.getGroupId(), xpAmount, "Completed task: " + task.getTitle());
-                userRepository.findById(userId).ifPresent(user ->
-                    logActivity(task.getGroupId(), "TASK_COMPLETED", user.getFullName(), null, task.getTitle(), task.getCoinsReward()));
+                userRepository.findById(userId).ifPresent(user -> {
+                    logActivity(task.getGroupId(), "TASK_COMPLETED", user.getFullName(), null, task.getTitle(), task.getCoinsReward());
+                    // Check pledge - fulfilled if completed on or before deadline
+                    if (task.getPledgeMessage() != null && !task.getPledgeMessage().isEmpty()) {
+                        boolean onTime = task.getDeadline() == null || !LocalDateTime.now().isAfter(task.getDeadline());
+                        String pledgeType = onTime ? "PLEDGE_FULFILLED" : "PLEDGE_MISSED";
+                        String pledgeDetail = onTime
+                            ? "fulfilled pledge on task: " + task.getTitle()
+                            : "missed pledge on task: " + task.getTitle();
+                        logActivity(task.getGroupId(), pledgeType, user.getFullName(), null, pledgeDetail, 0);
+                    }
+                });
             }
         }
 
@@ -385,7 +395,14 @@ public class TaskService {
         task.setPledgeMessage(message);
         task.setPledgedAt(LocalDateTime.now());
         task.setPledgedByUserId(userId);
-        return taskRepository.save(task);
+        Task saved = taskRepository.save(task);
+        // Log pledge in group activity feed
+        if (task.getGroupId() != null) {
+            userRepository.findById(userId).ifPresent(user ->
+                logActivity(task.getGroupId(), "PLEDGE_MADE", user.getFullName(), null,
+                    "pledged on task: " + task.getTitle(), 0));
+        }
+        return saved;
     }
 
     private int baseCoins(Priority priority) {
