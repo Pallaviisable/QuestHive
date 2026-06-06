@@ -35,7 +35,7 @@ public class TaskScheduler {
     private final GroupService groupService;
 
     // ── Deadline reminders — every hour ──────────────────────────────────────
-    @Scheduled(fixedRate = 3600000)
+    @Scheduled(fixedRate = 3600000, initialDelay = 300000)
     public void sendDeadlineReminders() {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime in24Hours = now.plusHours(24);
@@ -66,14 +66,14 @@ public class TaskScheduler {
     }
 
     // ── Open task processing — every hour ────────────────────────────────────
-    @Scheduled(fixedRate = 3600000)
+    @Scheduled(fixedRate = 3600000, initialDelay = 360000)
     public void processOpenTasks() {
         taskService.processOpenTaskNotifications();
     }
 
     // ── Unverified account cleanup — every hour ───────────────────────────────
     // New Feature #1: send 24h reminder, delete at 48h
-    @Scheduled(fixedRate = 3600000)
+    @Scheduled(fixedRate = 3600000, initialDelay = 420000)
     public void deleteUnverifiedAccounts() {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime reminderCutoff = now.minusHours(24);
