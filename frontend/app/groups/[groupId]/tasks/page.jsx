@@ -127,7 +127,7 @@ function TaskDetailModal({ task, user, onClose, onRefresh }) {
           {[
             { key: 'SUBTASKS', label: `📝 Subtasks ${subtasks.length > 0 ? `(${subtasks.length})` : ''}` },
             { key: 'COMMENTS', label: `💬 Comments ${comments.length > 0 ? `(${comments.length})` : ''}` },
-            { key: 'PLEDGE',   label: '🤝 Pledge' },
+            ...(task.assignedToId === user?.id ? [{ key: 'PLEDGE', label: '🤝 Pledge' }] : []),
           ].map(t => (
             <button key={t.key} onClick={() => setTab(t.key)} style={{
               padding: '8px 14px', borderRadius: '8px 8px 0 0', fontSize: '12px', fontWeight: 600, border: 'none', cursor: 'pointer',

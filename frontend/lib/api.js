@@ -131,7 +131,7 @@ export const flagBonus = (taskId) => API.post(`/fairness/tasks/${taskId}/flag-bo
 export const getReviewStatus = (taskId) => API.get(`/fairness/tasks/${taskId}/review-status`);
 
 // Notifications
-export const getNotifications = () => api.get('/notifications');
-export const getUnreadCount = () => api.get('/notifications/unread-count');
-export const markAllRead = () => api.post('/notifications/mark-all-read');
-export const markNotificationRead = (id) => api.post(`/notifications/${id}/read`);
+export const getNotifications = () => API.get('/notifications');
+export const getUnreadCount = () => API.get('/notifications/unread-count');
+export const markAllRead = () => API.post('/notifications/mark-all-read');
+export const markNotificationRead = (id) => API.post(`/notifications/${id}/read`);

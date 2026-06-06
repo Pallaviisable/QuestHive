@@ -67,7 +67,6 @@ export default function RootLayout({ children }) {
     if (!token && !isAuthPage) router.push('/login');
 
     // Fetch notifications
-    const token = localStorage.getItem('token');
     const storedUser = stored ? (() => { try { return JSON.parse(stored); } catch(e) { return null; } })() : null;
     if (token && storedUser) {
       getNotifications().then(res => {
@@ -75,26 +74,17 @@ export default function RootLayout({ children }) {
         setUnreadCount(res.data.filter(n => !n.read).length);
       }).catch(() => {});
 
-      // WebSocket for real-time notifications
-      if (!stompRef.current && typeof window !== 'undefined') {
-        import('sockjs-client').then(({ default: SockJS }) =>
-          import('@stomp/stompjs').then(({ Client }) => {
-            const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-            const client = new Client({
-              webSocketFactory: () => new SockJS(`${backendUrl}/ws`),
-              reconnectDelay: 5000,
-              onConnect: () => {
-                client.subscribe(`/topic/notifications/${storedUser.id}`, (msg) => {
-                  const notif = JSON.parse(msg.body);
-                  setNotifications(prev => [notif, ...prev]);
-                  setUnreadCount(prev => prev + 1);
-                });
-              },
-            });
-            client.activate();
-            stompRef.current = client;
-          })
-        );
+      // WebSocket for real-time notifications (polling fallback — no Turbopack issues)
+      if (!stompRef.current) {
+        stompRef.current = true;
+        const pollNotifications = () => {
+          getNotifications().then(res => {
+            setNotifications(res.data);
+            setUnreadCount(res.data.filter(n => !n.read).length);
+          }).catch(() => {});
+        };
+        const interval = setInterval(pollNotifications, 15000);
+        stompRef.current = interval;
       }
     }
 
