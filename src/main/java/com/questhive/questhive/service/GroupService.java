@@ -67,11 +67,10 @@ public class GroupService {
             throw new RuntimeException("Only the group admin can invite members.");
         }
 
-        userRepository.findByEmail(targetEmail).ifPresent(existingUser -> {
-            if (group.getMemberIds().contains(existingUser.getId())) {
-                throw new RuntimeException("This member is already present in the group.");
-            }
-        });
+        Optional<User> existingUser = userRepository.findByEmail(targetEmail.toLowerCase().trim());
+        if (existingUser.isPresent() && group.getMemberIds().contains(existingUser.get().getId())) {
+            throw new RuntimeException("This member is already present in the group.");
+        }
 
         Invite invite = inviteService.createMemberInvite(targetEmail, groupId, adminId);
         String inviteLink = frontendUrl + "/invite-preview?token=" + invite.getToken();
