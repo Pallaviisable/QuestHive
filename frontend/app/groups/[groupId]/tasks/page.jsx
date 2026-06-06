@@ -115,8 +115,8 @@ function TaskDetailModal({ task, user, onClose, onRefresh }) {
             <div style={{ marginTop: '10px', background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: '10px', padding: '10px 12px', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
               <span>🤝</span>
               <div>
-                <div style={{ fontSize: '11px', color: '#a855f7', fontWeight: 700, marginBottom: '2px' }}>Commitment Pledge</div>
-                <div style={{ fontSize: '13px', color: '#c4b5fd' }}>{pledge}</div>
+                <div style={{ fontSize: '12px', color: '#a855f7', fontWeight: 800, marginBottom: '4px', letterSpacing: '0.5px' }}>🤝 COMMITMENT PLEDGE</div>
+                <div style={{ fontSize: '14px', color: '#e9d5ff', fontWeight: 500 }}>{pledge}</div>
               </div>
             </div>
           )}
@@ -272,6 +272,10 @@ export default function GroupTasksPage() {
 
   const handleCreate = async (e) => {
     e.preventDefault(); setError('');
+    if (form.assignedToId && form.assignedToId === storedUser?.id) {
+      setError('You cannot assign a task to yourself. Please use My Nest to create personal tasks.');
+      return;
+    }
     try {
       await createGroupTask({ ...form, groupId, assignedToId: form.assignedToId || null, bonusCoins: form.bonusCoins ? parseInt(form.bonusCoins) : null, deadline: form.deadline ? new Date(form.deadline).toISOString() : null });
       setShowCreate(false);
