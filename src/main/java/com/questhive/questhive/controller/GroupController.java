@@ -111,8 +111,9 @@ public class GroupController {
     @DeleteMapping("/{groupId}/members/{memberId}")
     public ResponseEntity<?> removeMember(@RequestHeader("Authorization") String auth,
                                           @PathVariable String groupId,
-                                          @PathVariable String memberId) {
-        groupService.removeMember(extractUserId(auth), groupId, memberId);
+                                          @PathVariable String memberId,
+                                          @RequestParam(required = false) String reason) {
+        groupService.removeMember(extractUserId(auth), groupId, memberId, reason);
         return ResponseEntity.ok(Map.of("message", "Member removed."));
     }
 

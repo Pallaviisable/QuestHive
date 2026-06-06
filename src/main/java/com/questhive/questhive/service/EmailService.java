@@ -358,4 +358,19 @@ public class EmailService {
                     + para("If you need a new verification link, log in and use the resend option.");
         sendEmail(toEmail, "QuestHive — Action Required: Verify Your Email", baseTemplate("Verify Your Email", body));
     }
+    public void sendMemberRemoved(String toEmail, String memberName, String groupName, String adminName, String reason) {
+        String subject = "You have been removed from " + groupName;
+        String reasonHtml = (reason != null && !reason.isBlank())
+            ? "<p style='margin:0 0 16px;font-size:14px;color:#ccc;'><strong style='color:#fff;'>Reason:</strong> " + reason + "</p>"
+            : "";
+        String html = baseTemplate(
+            "<h2 style='margin:0 0 8px;font-size:20px;font-weight:700;color:#fff;'>Removed from Group</h2>"
+            + "<p style='margin:0 0 20px;font-size:14px;color:#aaa;'>Hi " + memberName + ",</p>"
+            + "<p style='margin:0 0 16px;font-size:14px;color:#ccc;'>You have been removed from the group <strong style='color:#fff;'>" + groupName + "</strong> by <strong style='color:#fff;'>" + adminName + "</strong>.</p>"
+            + reasonHtml
+            + "<p style='margin:0;font-size:13px;color:#666;'>If you believe this was a mistake, please contact the group admin.</p>"
+        );
+        sendEmail(toEmail, subject, html);
+    }
+
 }

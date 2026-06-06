@@ -1,15 +1,13 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getMyGroups, createGroup, joinGroup } from '@/lib/api';
+import { getMyGroups, createGroup } from '@/lib/api';
 
 export default function GroupsPage() {
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [showJoin, setShowJoin] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: '', description: '' });
-  const [inviteCode, setInviteCode] = useState('');
+  const [createForm, setCreateForm] = useState({ name: '', description: '', template: '' });
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -42,19 +40,7 @@ export default function GroupsPage() {
     }
   };
 
-  const handleJoin = async (e) => {
-    e.preventDefault();
-    try {
-      await joinGroup(inviteCode);
-      setShowJoin(false);
-      setInviteCode('');
-      setSuccessMsg('Joined group successfully!');
-      setTimeout(() => setSuccessMsg(''), 3000);
-      fetchGroups();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Invalid invite code.');
-    }
-  };
+
 
   return (
     <div className="animate-fadeSlideUp">
@@ -110,15 +96,6 @@ export default function GroupsPage() {
             + Create Group
           </button>
 
-          <button
-            className="btn-secondary"
-            onClick={() => {
-              setShowJoin(true);
-              setError('');
-            }}
-          >
-            🔗 Join Group
-          </button>
         </div>
       </div>
 
@@ -385,6 +362,42 @@ export default function GroupsPage() {
               />
             </div>
 
+            <div>
+              <label style={{ color: '#a0a0a0', fontSize: '13px', display: 'block', marginBottom: '6px' }}>
+                Template (optional)
+              </label>
+              <select
+                className="input"
+                value={createForm.template}
+                onChange={e => setCreateForm({ ...createForm, template: e.target.value })}
+              >
+                <option value="">No template</option>
+                <option value="FAMILY">Family</option>
+                <option value="STUDY">Study Group</option>
+                <option value="FITNESS">Fitness</option>
+                <option value="WORK">Work Team</option>
+                <option value="CUSTOM">Custom</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ color: '#a0a0a0', fontSize: '13px', display: 'block', marginBottom: '6px' }}>
+                Template (optional)
+              </label>
+              <select
+                className="input"
+                value={createForm.template}
+                onChange={e => setCreateForm({ ...createForm, template: e.target.value })}
+              >
+                <option value="">No template</option>
+                <option value="FAMILY">Family</option>
+                <option value="STUDY">Study Group</option>
+                <option value="FITNESS">Fitness</option>
+                <option value="WORK">Work Team</option>
+                <option value="CUSTOM">Custom</option>
+              </select>
+            </div>
+
             <button
               className="btn-primary"
               type="submit"
@@ -396,50 +409,6 @@ export default function GroupsPage() {
         </Modal>
       )}
 
-      {showJoin && (
-        <Modal
-          title="Join Group"
-          onClose={() => setShowJoin(false)}
-        >
-          <form
-            onSubmit={handleJoin}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-            }}
-          >
-            <div>
-              <label
-                style={{
-                  color: '#a0a0a0',
-                  fontSize: '13px',
-                  display: 'block',
-                  marginBottom: '6px',
-                }}
-              >
-                Invite Code *
-              </label>
-
-              <input
-                className="input"
-                placeholder="Enter invite code e.g. ABC123"
-                value={inviteCode}
-                onChange={e => setInviteCode(e.target.value)}
-                required
-              />
-            </div>
-
-            <button
-              className="btn-primary"
-              type="submit"
-              style={{ justifyContent: 'center' }}
-            >
-              🔗 Join Group
-            </button>
-          </form>
-        </Modal>
-      )}
     </div>
   );
 }

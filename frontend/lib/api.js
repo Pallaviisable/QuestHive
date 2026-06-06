@@ -45,7 +45,7 @@ export const getGroup = (groupId) => API.get(`/groups/${groupId}`);
 export const getGroupDetail = (groupId) => API.get(`/groups/${groupId}/detail`);
 export const inviteByEmail = (groupId, email) => API.post(`/groups/${groupId}/invite-email`, { email });
 export const leaveGroup = (groupId) => API.post(`/groups/${groupId}/leave`);
-export const removeMember = (groupId, memberId) => API.delete(`/groups/${groupId}/members/${memberId}`);
+export const removeMember = (groupId, memberId, reason) => API.delete(`/groups/${groupId}/members/${memberId}`, { params: reason ? { reason } : {} });
 export const deactivateMember = (groupId, memberId, reason = '') => API.post(`/groups/${groupId}/members/${memberId}/deactivate`, { reason });
 export const reactivateMember = (groupId, memberId) => API.post(`/groups/${groupId}/members/${memberId}/reactivate`);
 export const deleteGroup = (groupId) => API.delete(`/groups/${groupId}`);

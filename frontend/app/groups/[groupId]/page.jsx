@@ -33,6 +33,9 @@ export default function GroupDetailPage() {
 
   const [group, setGroup] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [removeTarget, setRemoveTarget] = useState(null);
+  const [removeReason, setRemoveReason] = useState('');
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
   const [user, setUser] = useState(null);
 
   const [inviteEmail, setInviteEmail] = useState('');
@@ -131,22 +134,23 @@ export default function GroupDetailPage() {
   };
 
   const handleRemoveMember = (member) => {
-    setConfirmModal({
-      title: '🚫 Remove Member',
-      message: `Remove ${member.fullName} from the group?`,
-      confirmLabel: 'Yes, Remove',
-      onConfirm: async () => {
-        try {
-          await removeMember(groupId, member.id);
-          setConfirmModal(null);
-          setMsg(`${member.fullName} has been removed.`);
-          fetchGroup(); fetchActivities();
-        } catch (err) {
-          setError(err.response?.data?.message || 'Failed to remove member.');
-          setConfirmModal(null);
-        }
-      },
-    });
+    setRemoveTarget(member);
+    setRemoveReason('');
+    setShowRemoveModal(true);
+  };
+
+  const confirmRemoveMember = async () => {
+    if (!removeTarget) return;
+    try {
+      await removeMember(groupId, removeTarget.id, removeReason);
+      setShowRemoveModal(false);
+      setRemoveTarget(null);
+      setMsg(`${removeTarget.fullName} has been removed.`);
+      fetchGroup(); fetchActivities();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to remove member.');
+      setShowRemoveModal(false);
+    }
   };
 
   // Enhancement #3 + #4: deactivate with reason
@@ -209,6 +213,41 @@ export default function GroupDetailPage() {
     <div className="animate-fadeSlideUp">
 
       {/* Confirm Modal */}
+            {/* Remove Member Modal */}
+      {showRemoveModal && removeTarget && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 400, padding: '16px' }}>
+          <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-hover)', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '400px', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '6px', color: 'var(--text-primary)' }}>Remove Member</h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
+              Remove <strong style={{ color: 'var(--text-primary)' }}>{removeTarget.fullName}</strong> from this group?
+            </p>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                Reason (optional)
+              </label>
+              <textarea
+                className="input"
+                placeholder="Let them know why they are being removed..."
+                value={removeReason}
+                onChange={e => setRemoveReason(e.target.value)}
+                rows={3}
+                style={{ resize: 'none' }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button onClick={() => { setShowRemoveModal(false); setRemoveTarget(null); }}
+                style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--text-secondary)', borderRadius: '8px', padding: '8px 18px', fontSize: '13px', cursor: 'pointer', fontWeight: 500 }}>
+                Cancel
+              </button>
+              <button onClick={confirmRemoveMember}
+                style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', color: 'var(--danger)', borderRadius: '8px', padding: '8px 18px', fontSize: '13px', cursor: 'pointer', fontWeight: 700 }}>
+                Remove Member
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {confirmModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: '16px', padding: '32px', maxWidth: '400px', width: '90%' }}>

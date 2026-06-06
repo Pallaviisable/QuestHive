@@ -188,7 +188,7 @@ public class GroupService {
                         null, "left the group", 0));
     }
 
-    public void removeMember(String adminId, String groupId, String targetUserId) {
+    public void removeMember(String adminId, String groupId, String targetUserId, String reason) {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("Group not found."));
         if (!group.getAdminId().equals(adminId)) {
@@ -200,9 +200,12 @@ public class GroupService {
         group.getMemberIds().remove(targetUserId);
         groupRepository.save(group);
         userRepository.findById(targetUserId).ifPresent(target ->
-                userRepository.findById(adminId).ifPresent(admin ->
-                        logActivity(groupId, "MEMBER_REMOVED", admin.getFullName(),
-                                target.getFullName(), target.getFullName() + " was removed", 0)));
+                userRepository.findById(adminId).ifPresent(admin -> {
+                    logActivity(groupId, "MEMBER_REMOVED", admin.getFullName(),
+                            target.getFullName(), target.getFullName() + " was removed", 0);
+                    emailService.sendMemberRemoved(target.getEmail(), target.getFullName(),
+                            group.getName(), admin.getFullName(), reason);
+                }));
     }
 
     public void deleteGroup(String adminId, String groupId) {
