@@ -221,16 +221,17 @@ function LineChart({ thisWeek, lastWeek, width = 300, height = 120 }) {
 const Pill = ({ label, value, color, sub }) => (
   <div style={{
     background: 'var(--bg-card)', border: '1px solid var(--border)',
-    borderRadius: '12px', padding: '18px 20px',
-    display: 'flex', flexDirection: 'column', gap: '4px',
+    borderRadius: '10px', padding: '14px 16px',
+    display: 'flex', flexDirection: 'column', gap: '3px',
     transition: 'border-color 0.2s',
+    minWidth: 0,
   }}
     onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-hover)'}
     onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
   >
-    <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
-    <span style={{ fontSize: '26px', fontWeight: 800, color: color || 'var(--text-primary)', letterSpacing: '-0.5px', lineHeight: 1 }}>{value ?? '—'}</span>
-    {sub && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{sub}</span>}
+    <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
+    <span style={{ fontSize: '22px', fontWeight: 800, color: color || 'var(--text-primary)', letterSpacing: '-0.5px', lineHeight: 1.1 }}>{value ?? '—'}</span>
+    {sub && <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{sub}</span>}
   </div>
 );
 
@@ -340,7 +341,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* KPI row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))', gap: '10px', marginBottom: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '10px', marginBottom: '24px' }}>
         <Pill label="Total Users"   value={data.totalUsers}                          color="var(--text-primary)" />
         <Pill label="Active Users"  value={data.activeUsers}                         color="var(--success)"      sub={`${data.deactivatedUsers || 0} deactivated`} />
         <Pill label="New This Week" value={data.newUsersThisWeek}                    color="var(--info)" />
