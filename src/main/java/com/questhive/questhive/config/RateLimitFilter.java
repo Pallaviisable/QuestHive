@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private final Map<String, List<Long>> attemptMap = new ConcurrentHashMap<>();
-    private static final int MAX_ATTEMPTS = 3;
+    private static final int MAX_ATTEMPTS = 20;
     private static final long WINDOW_MS = 60 * 60 * 1000L; // 1 hour
 
     @Override
