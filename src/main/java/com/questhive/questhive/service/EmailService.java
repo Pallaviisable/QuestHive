@@ -363,9 +363,8 @@ public class EmailService {
         String reasonHtml = (reason != null && !reason.isBlank())
             ? "<p style='margin:0 0 16px;font-size:14px;color:#ccc;'><strong style='color:#fff;'>Reason:</strong> " + reason + "</p>"
             : "";
-        String html = baseTemplate(
-            "<h2 style='margin:0 0 8px;font-size:20px;font-weight:700;color:#fff;'>Removed from Group</h2>"
-            + "<p style='margin:0 0 20px;font-size:14px;color:#aaa;'>Hi " + memberName + ",</p>"
+        String html = baseTemplate("Removed from Group",
+            "<p style='margin:0 0 12px;font-size:14px;color:#ccc;'>Hi <strong style='color:#fff;'>" + memberName + "</strong>,</p>"
             + "<p style='margin:0 0 16px;font-size:14px;color:#ccc;'>You have been removed from the group <strong style='color:#fff;'>" + groupName + "</strong> by <strong style='color:#fff;'>" + adminName + "</strong>.</p>"
             + reasonHtml
             + "<p style='margin:0;font-size:13px;color:#666;'>If you believe this was a mistake, please contact the group admin.</p>"

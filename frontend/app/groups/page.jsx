@@ -301,110 +301,97 @@ export default function GroupsPage() {
           title="Create Group"
           onClose={() => setShowCreate(false)}
         >
-          <form
-            onSubmit={handleCreate}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-            }}
-          >
-            <div>
-              <label
-                style={{
-                  color: '#a0a0a0',
-                  fontSize: '13px',
-                  display: 'block',
-                  marginBottom: '6px',
-                }}
-              >
-                Group Name *
-              </label>
+          <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
+            {/* Template picker — visual tiles */}
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                Template
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                {[
+                  { value: '', label: 'Blank', icon: '○' },
+                  { value: 'FAMILY', label: 'Family', icon: '⌂' },
+                  { value: 'STUDY', label: 'Study', icon: '◎' },
+                  { value: 'FITNESS', label: 'Fitness', icon: '◈' },
+                  { value: 'WORK', label: 'Work', icon: '◧' },
+                  { value: 'CUSTOM', label: 'Custom', icon: '◉' },
+                ].map(t => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setCreateForm({ ...createForm, template: t.value })}
+                    style={{
+                      background: createForm.template === t.value ? 'rgba(245,197,24,0.1)' : 'var(--bg-elevated)',
+                      border: `1px solid ${createForm.template === t.value ? 'var(--accent)' : 'var(--border)'}`,
+                      borderRadius: '10px',
+                      padding: '10px 8px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <span style={{ fontSize: '16px', color: createForm.template === t.value ? 'var(--accent)' : 'var(--text-muted)' }}>{t.icon}</span>
+                    <span style={{ fontSize: '11px', fontWeight: 600, color: createForm.template === t.value ? 'var(--accent)' : 'var(--text-secondary)' }}>{t.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ height: '1px', background: 'var(--border)' }} />
+
+            {/* Name */}
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                Group Name <span style={{ color: 'var(--danger)' }}>*</span>
+              </label>
               <input
                 className="input"
                 placeholder="e.g. Study Squad"
                 value={createForm.name}
-                onChange={e =>
-                  setCreateForm({
-                    ...createForm,
-                    name: e.target.value,
-                  })
-                }
+                onChange={e => setCreateForm({ ...createForm, name: e.target.value })}
                 required
+                autoFocus
               />
             </div>
 
+            {/* Description */}
             <div>
-              <label
-                style={{
-                  color: '#a0a0a0',
-                  fontSize: '13px',
-                  display: 'block',
-                  marginBottom: '6px',
-                }}
-              >
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                 Description
               </label>
-
               <textarea
                 className="input"
                 placeholder="What's this group about? (optional)"
                 value={createForm.description}
-                onChange={e =>
-                  setCreateForm({
-                    ...createForm,
-                    description: e.target.value,
-                  })
-                }
-                rows={3}
+                onChange={e => setCreateForm({ ...createForm, description: e.target.value })}
+                rows={2}
                 style={{ resize: 'none' }}
               />
             </div>
 
-            <div>
-              <label style={{ color: '#a0a0a0', fontSize: '13px', display: 'block', marginBottom: '6px' }}>
-                Template (optional)
-              </label>
-              <select
-                className="input"
-                value={createForm.template}
-                onChange={e => setCreateForm({ ...createForm, template: e.target.value })}
-              >
-                <option value="">No template</option>
-                <option value="FAMILY">Family</option>
-                <option value="STUDY">Study Group</option>
-                <option value="FITNESS">Fitness</option>
-                <option value="WORK">Work Team</option>
-                <option value="CUSTOM">Custom</option>
-              </select>
+            {/* Submit */}
+            <div style={{ display: 'flex', gap: '10px', paddingTop: '4px' }}>
+              <button type="button" onClick={() => setShowCreate(false)} style={{
+                flex: 1, background: 'none', border: '1px solid var(--border)',
+                color: 'var(--text-secondary)', borderRadius: '10px', padding: '11px',
+                fontSize: '13px', fontWeight: 600, cursor: 'pointer',
+              }}>
+                Cancel
+              </button>
+              <button type="submit" style={{
+                flex: 2, background: 'var(--accent)', color: '#000',
+                border: 'none', borderRadius: '10px', padding: '11px',
+                fontSize: '14px', fontWeight: 700, cursor: 'pointer',
+                transition: 'opacity 0.15s',
+              }}>
+                Create Group
+              </button>
             </div>
 
-            <div>
-              <label style={{ color: '#a0a0a0', fontSize: '13px', display: 'block', marginBottom: '6px' }}>
-                Template (optional)
-              </label>
-              <select
-                className="input"
-                value={createForm.template}
-                onChange={e => setCreateForm({ ...createForm, template: e.target.value })}
-              >
-                <option value="">No template</option>
-                <option value="FAMILY">Family</option>
-                <option value="STUDY">Study Group</option>
-                <option value="FITNESS">Fitness</option>
-                <option value="WORK">Work Team</option>
-                <option value="CUSTOM">Custom</option>
-              </select>
-            </div>
-
-            <button
-              className="btn-primary"
-              type="submit"
-              style={{ justifyContent: 'center' }}
-            >
-              🐝 Create Group
-            </button>
           </form>
         </Modal>
       )}
@@ -415,62 +402,52 @@ export default function GroupsPage() {
 
 function Modal({ title, onClose, children }) {
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.75)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 200,
-        padding: '16px',
-      }}
-    >
-      <div
-        className="animate-fadeSlideUp"
-        style={{
-          background: '#1a1a1a',
-          borderRadius: '20px',
-          border: '1px solid #2a2a2a',
-          padding: '32px',
-          width: '100%',
-          maxWidth: '420px',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '24px',
-          }}
-        >
-          <h2 style={{ fontSize: '18px', fontWeight: 700 }}>
-            {title}
-          </h2>
-
-          <button
-            onClick={onClose}
-            style={{
-              background: '#222',
-              border: '1px solid #333',
-              color: '#a0a0a0',
-              fontSize: '16px',
-              cursor: 'pointer',
-              borderRadius: '8px',
-              width: '32px',
-              height: '32px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            ✕
-          </button>
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      background: 'rgba(0,0,0,0.82)',
+      backdropFilter: 'blur(6px)',
+      display: 'flex',
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+      zIndex: 200,
+      padding: '80px 16px 16px',
+      overflowY: 'auto',
+    }}>
+      <div style={{
+        background: 'var(--bg-card)',
+        borderRadius: '16px',
+        border: '1px solid var(--border-hover)',
+        width: '100%',
+        maxWidth: '460px',
+        boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+        animation: 'scaleIn 0.2s cubic-bezier(0.16,1,0.3,1)',
+      }}>
+        {/* Modal header */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '20px 24px',
+          borderBottom: '1px solid var(--border)',
+        }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{title}</h2>
+          <button onClick={onClose} style={{
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border)',
+            color: 'var(--text-muted)',
+            borderRadius: '6px',
+            width: '28px', height: '28px',
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '14px', flexShrink: 0,
+            transition: 'all 0.15s',
+          }}>✕</button>
         </div>
-
-        {children}
+        {/* Modal body */}
+        <div style={{ padding: '24px' }}>
+          {children}
+        </div>
       </div>
     </div>
   );
