@@ -56,7 +56,13 @@ public class TaskService {
         task.setDeadline(deadline);
         task.setStatus(Status.PENDING);
         task.setPersonal(false);
-        task.setCoinsReward(baseCoins(priority) + (bonusCoins != null ? bonusCoins : 0));
+        int totalCoins = baseCoins(priority) + (bonusCoins != null ? bonusCoins : 0);
+        task.setCoinsReward(totalCoins);
+        if (bonusCoins != null && bonusCoins >= 50) {
+            task.setPendingPeerReview(true);
+            task.setBonusCoinsAmount(bonusCoins);
+            task.setPeerReviewDeadline(LocalDateTime.now().plusHours(24));
+        }
         task.setCreatedAt(LocalDateTime.now());
 
         Task saved = taskRepository.save(task);
@@ -256,7 +262,13 @@ public class TaskService {
         if (description != null) task.setDescription(description);
         if (priority != null) {
             task.setPriority(priority);
-            task.setCoinsReward(baseCoins(priority) + (bonusCoins != null ? bonusCoins : 0));
+            int editedCoins = baseCoins(priority) + (bonusCoins != null ? bonusCoins : 0);
+            task.setCoinsReward(editedCoins);
+            if (bonusCoins != null && bonusCoins >= 50) {
+                task.setPendingPeerReview(true);
+                task.setBonusCoinsAmount(bonusCoins);
+                task.setPeerReviewDeadline(LocalDateTime.now().plusHours(24));
+            }
         }
         if (category != null) task.setCategory(category);
         if (deadline != null) task.setDeadline(deadline);

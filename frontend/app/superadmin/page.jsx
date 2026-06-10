@@ -1,11 +1,13 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { getNotifications, markAllRead, markNotificationRead } from '@/lib/api';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   getAllSuperAdminRequests,
   approveAdminRequest, rejectAdminRequest,
   getSuperAdminUsers, deactivatePlatformUser,
-  activatePlatformUser, removePlatformUser
+  activatePlatformUser, removePlatformUser,
+  getAllFeedback, updateFeedbackStatus
 } from '@/lib/api';
 
 export default function SuperAdminPage() {
@@ -17,6 +19,7 @@ export default function SuperAdminPage() {
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
+  const [feedbackList, setFeedbackList] = useState([]);
 
   // Reason modal state
   const [reasonModal, setReasonModal] = useState(null);
@@ -31,12 +34,14 @@ export default function SuperAdminPage() {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [reqRes, userRes] = await Promise.all([
+      const [reqRes, userRes, fbRes] = await Promise.all([
         getAllSuperAdminRequests(),
         getSuperAdminUsers(),
+        getAllFeedback(),
       ]);
       setRequests(reqRes.data);
       setUsers(userRes.data);
+      setFeedbackList(fbRes.data);
     } catch { setError('Failed to load data.'); }
     finally { setLoading(false); }
   };
@@ -169,6 +174,7 @@ export default function SuperAdminPage() {
           {[
             { key: 'REQUESTS', label: '📋 Admin Requests', badge: pending },
             { key: 'USERS', label: '👥 All Users', badge: null },
+            { key: 'FEEDBACK', label: '💬 Feedback', badge: feedbackList.filter(f => f.status === 'OPEN').length || null },
           ].map(t => (
             <button key={t.key} onClick={() => setTab(t.key)} style={{
               padding: '10px 22px', borderRadius: '10px', fontSize: '13px', fontWeight: 600,
@@ -231,6 +237,48 @@ export default function SuperAdminPage() {
                       btnColor: 'rgba(239,68,68,0.8)',
                     })} style={{ background: 'rgba(239,68,68,0.08)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '10px', padding: '9px 20px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>✕ Reject</button>
                   </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+        ) : tab === 'FEEDBACK' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {feedbackList.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '80px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', color: 'rgba(255,255,255,0.2)' }}>No feedback yet.</div>
+            ) : feedbackList.map(fb => (
+              <div key={fb.id} style={{
+                background: 'rgba(255,255,255,0.03)', border: `1px solid ${fb.status === 'OPEN' ? 'rgba(245,197,24,0.2)' : 'rgba(255,255,255,0.06)'}`,
+                borderRadius: '18px', padding: '22px 26px',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ color: '#fff', fontWeight: 700, fontSize: '14px' }}>{fb.username}</span>
+                    <span style={{
+                      fontSize: '10px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px',
+                      background: fb.type === 'BUG' ? 'rgba(239,68,68,0.12)' : 'rgba(99,102,241,0.12)',
+                      color: fb.type === 'BUG' ? '#f87171' : '#818cf8',
+                      border: `1px solid ${fb.type === 'BUG' ? 'rgba(239,68,68,0.25)' : 'rgba(99,102,241,0.25)'}`,
+                    }}>{fb.type === 'BUG' ? '🐛 Bug' : '💡 Suggestion'}</span>
+                    <span style={{
+                      fontSize: '10px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px',
+                      background: fb.status === 'OPEN' ? 'rgba(245,197,24,0.12)' : 'rgba(34,197,94,0.12)',
+                      color: fb.status === 'OPEN' ? '#fbbf24' : '#34d399',
+                      border: `1px solid ${fb.status === 'OPEN' ? 'rgba(245,197,24,0.25)' : 'rgba(34,197,94,0.25)'}`,
+                    }}>{fb.status}</span>
+                  </div>
+                  <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '11px' }}>
+                    {new Date(fb.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </span>
+                </div>
+                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '13px', lineHeight: 1.6, margin: '0 0 12px' }}>{fb.message}</p>
+                {fb.status === 'OPEN' && (
+                  <button onClick={async () => {
+                    await updateFeedbackStatus(fb.id, 'REVIEWED');
+                    setFeedbackList(prev => prev.map(f => f.id === fb.id ? {...f, status: 'REVIEWED'} : f));
+                  }} style={{ background: 'rgba(34,197,94,0.1)', color: '#34d399', border: '1px solid rgba(34,197,94,0.25)', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+                    ✓ Mark Reviewed
+                  </button>
                 )}
               </div>
             ))}

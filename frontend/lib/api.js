@@ -101,6 +101,8 @@ export const logAnalyticsEvent = (data) => API.post('/analytics/event', data);
 
 /* FEEDBACK */
 export const submitFeedback = (data) => API.post('/feedback', data);
+export const getAllFeedback = () => API.get('/feedback/all');
+export const updateFeedbackStatus = (id, status) => API.patch(`/feedback/${id}/status`, { status });
 
 /* CHAT */
 export const getChatMessages = (groupId) => API.get(`/chat/${groupId}/messages`);

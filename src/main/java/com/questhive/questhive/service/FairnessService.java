@@ -8,6 +8,9 @@ import com.questhive.questhive.repository.GroupRepository;
 import com.questhive.questhive.repository.RewardRepository;
 import com.questhive.questhive.repository.TaskRepository;
 import com.questhive.questhive.repository.UserRepository;
+import com.questhive.questhive.repository.NotificationRepository;
+import com.questhive.questhive.model.Notification;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +20,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class FairnessService {
+    private final NotificationRepository notificationRepository;
 
     private final GroupRepository groupRepository;
     private final TaskRepository taskRepository;
@@ -191,17 +195,38 @@ public class FairnessService {
         if (!task.getBonusFlaggedByUserIds().contains(flaggedByUserId)) {
             task.getBonusFlaggedByUserIds().add(flaggedByUserId);
         }
-        // If 2+ flags → mark as disputed
-        if (task.getBonusFlaggedByUserIds().size() >= 2) {
+        int flagCount = task.getBonusFlaggedByUserIds().size();
+
+        // If 3+ flags → reopen task + notify all group members + admin
+        if (flagCount >= 3) {
             task.setBonusDisputed(true);
             task.setPendingPeerReview(false);
+            task.setStatus(com.questhive.questhive.model.Task.Status.PENDING);
+
+            // Notify all group members
+            List<String> memberIds = groupRepository.findById(task.getGroupId())
+                    .map(com.questhive.questhive.model.Group::getMemberIds)
+                    .orElse(java.util.Collections.emptyList());
+            List<com.questhive.questhive.model.User> groupMembers =
+                userRepository.findAllById(memberIds);
+            for (com.questhive.questhive.model.User member : groupMembers) {
+                com.questhive.questhive.model.Notification notif = new com.questhive.questhive.model.Notification();
+                notif.setUserId(member.getId());
+                notif.setTitle("⚠️ Bonus Disputed");
+                notif.setBody("Task \"" + task.getTitle() + "\" was flagged 3 times for unfair bonus and has been reopened.");
+                notif.setType("BONUS_DISPUTED");
+                notif.setRead(false);
+                notif.setCreatedAt(java.time.LocalDateTime.now());
+                notificationRepository.save(notif);
+            }
         }
+
         taskRepository.save(task);
-        return Map.of("success", true, "flags", task.getBonusFlaggedByUserIds().size(),
+        return Map.of("success", true, "flags", flagCount,
                 "disputed", task.isBonusDisputed(),
                 "message", task.isBonusDisputed() ?
-                        "Bonus disputed by group members — admin review required." :
-                        "Flag recorded. " + task.getBonusFlaggedByUserIds().size() + " flag(s) so far.");
+                        "Task flagged 3 times — reopened and all members notified." :
+                        "Flag recorded. " + flagCount + " flag(s) so far.");
     }
 
     public Map<String, Object> getReviewStatus(String taskId) {

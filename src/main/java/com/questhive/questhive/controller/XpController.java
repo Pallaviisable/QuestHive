@@ -22,4 +22,9 @@ public class XpController {
         String userId = jwtUtil.extractUserId(token);
         return ResponseEntity.ok(xpService.getUserXpSummary(userId));
     }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<?> getUserXp(@PathVariable String userId) {
+        return ResponseEntity.ok(xpService.getUserXpSummary(userId));
+    }
 }

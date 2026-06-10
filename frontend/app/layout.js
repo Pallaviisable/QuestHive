@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import { getNotifications, markAllRead, markNotificationRead } from '@/lib/api';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import FeedbackButton from '@/components/FeedbackButton';
 import './globals.css';
 
 const memberNavItems = [
@@ -39,6 +40,12 @@ function PageLoader() {
       zIndex: 9999,
     }} />
   );
+}
+
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(err => console.error('SW failed:', err));
+  });
 }
 
 export default function RootLayout({ children }) {
@@ -356,6 +363,7 @@ export default function RootLayout({ children }) {
             {children}
           </main>
         </div>
+      <FeedbackButton />
       </body>
     </html>
   );

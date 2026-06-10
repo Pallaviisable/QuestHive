@@ -4,7 +4,8 @@ import { useParams } from 'next/navigation';
 import {
   getGroupTasks, getTasksAssignedByMe, createGroupTask, updateTaskStatus,
   deleteTask, claimTask, editTask, denyTask, updateTaskPriority,
-  addTaskComment, addSubtask, completeSubtask, addCommitmentPledge
+  addTaskComment, addSubtask, completeSubtask, addCommitmentPledge,
+  requestBonusReview, flagBonus, getReviewStatus, getMyXP,
 } from '@/lib/api';
 import axios from 'axios';
 
@@ -13,31 +14,58 @@ const priorityColor = { LOW: '#22c55e', MEDIUM: '#f5c518', HIGH: '#ef4444' };
 const statusColor   = { PENDING: '#a0a0a0', IN_PROGRESS: '#3b82f6', COMPLETED: '#22c55e' };
 const statusBg      = { PENDING: 'rgba(160,160,160,0.12)', IN_PROGRESS: 'rgba(59,130,246,0.12)', COMPLETED: 'rgba(34,197,94,0.12)' };
 
+const TITLE_TIERS = [
+  { frame: 'none',   title: 'Newcomer',       minLevel: 1,  color: '#666' },
+  { frame: 'bronze', title: 'Task Starter',   minLevel: 3,  color: '#cd7f32' },
+  { frame: 'silver', title: 'Steady Worker',  minLevel: 6,  color: '#c0c0c0' },
+  { frame: 'gold',   title: 'Dedicated Bee',  minLevel: 10, color: '#f5c518' },
+  { frame: 'purple', title: 'Quest Champion', minLevel: 15, color: '#a855f7' },
+  { frame: 'elite',  title: 'Elite Bee',      minLevel: 20, color: '#ef4444' },
+];
+function getTier(level = 1) {
+  let tier = TITLE_TIERS[0];
+  for (const t of TITLE_TIERS) { if (level >= t.minLevel) tier = t; }
+  return tier;
+}
+
 /* ─── Task Detail Modal ─────────────────────────────────────── */
-function TaskDetailModal({ task, user, onClose, onRefresh }) {
-  const [comments, setComments]       = useState(task.comments || []);
-  const [subtasks, setSubtasks]       = useState(task.subtasks || []);
-  const [pledge, setPledge]           = useState(task.pledgeMessage || '');
-  const [commentText, setCommentText] = useState('');
+function TaskDetailModal({ task, user, onClose, onRefresh, xpMap }) {
+  const [comments, setComments]         = useState(task.comments || []);
+  const [subtasks, setSubtasks]         = useState(task.subtasks || []);
+  const [pledge, setPledge]             = useState(task.pledgeMessage || '');
+  const [commentText, setCommentText]   = useState('');
   const [subtaskTitle, setSubtaskTitle] = useState('');
-  const [pledgeText, setPledgeText]   = useState('');
-  const [tab, setTab]                 = useState('SUBTASKS');
-  const [saving, setSaving]           = useState(false);
+  const [pledgeText, setPledgeText]     = useState('');
+  const [tab, setTab]                   = useState('SUBTASKS');
+  const [saving, setSaving]             = useState(false);
+  const [reviewStatus, setReviewStatus] = useState(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
   const bottomRef = useRef(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [comments]);
 
+  useEffect(() => {
+    if (tab === 'REVIEW') loadReviewStatus();
+  }, [tab]);
+
+  const loadReviewStatus = async () => {
+    setReviewLoading(true);
+    try {
+      const res = await getReviewStatus(task.id);
+      setReviewStatus(res.data);
+    } catch { setReviewStatus(null); }
+    setReviewLoading(false);
+  };
+
   const handleAddComment = async () => {
     if (!commentText.trim()) return;
     setSaving(true);
     try {
       const res = await addTaskComment(task.id, { content: commentText.trim() });
-      setComments(res.data.comments || []);
-      setCommentText('');
-      onRefresh();
-    } catch (e) { alert('Failed to add comment'); }
+      setComments(res.data.comments || []); setCommentText(''); onRefresh();
+    } catch { alert('Failed to add comment'); }
     setSaving(false);
   };
 
@@ -46,19 +74,16 @@ function TaskDetailModal({ task, user, onClose, onRefresh }) {
     setSaving(true);
     try {
       const res = await addSubtask(task.id, { title: subtaskTitle.trim() });
-      setSubtasks(res.data.subtasks || []);
-      setSubtaskTitle('');
-      onRefresh();
-    } catch (e) { alert('Failed to add subtask'); }
+      setSubtasks(res.data.subtasks || []); setSubtaskTitle(''); onRefresh();
+    } catch { alert('Failed to add subtask'); }
     setSaving(false);
   };
 
   const handleCompleteSubtask = async (subtaskId) => {
     try {
       const res = await completeSubtask(task.id, subtaskId);
-      setSubtasks(res.data.subtasks || []);
-      onRefresh();
-    } catch (e) { alert('Failed to complete subtask'); }
+      setSubtasks(res.data.subtasks || []); onRefresh();
+    } catch { alert('Failed to complete subtask'); }
   };
 
   const handlePledge = async () => {
@@ -66,15 +91,39 @@ function TaskDetailModal({ task, user, onClose, onRefresh }) {
     setSaving(true);
     try {
       await addCommitmentPledge(task.id, { message: pledgeText.trim() });
-      setPledge(pledgeText.trim());
-      setPledgeText('');
-      onRefresh();
-    } catch (e) { alert('Failed to save pledge'); }
+      setPledge(pledgeText.trim()); setPledgeText(''); onRefresh();
+    } catch { alert('Failed to save pledge'); }
+    setSaving(false);
+  };
+
+  const handleRequestReview = async () => {
+    setSaving(true);
+    try {
+      await requestBonusReview(task.id, task.bonusCoins || 0);
+      await loadReviewStatus();
+    } catch { alert('Failed to request review'); }
+    setSaving(false);
+  };
+
+  const handleFlagBonus = async () => {
+    setSaving(true);
+    try {
+      await flagBonus(task.id);
+      await loadReviewStatus();
+    } catch { alert('Failed to flag bonus'); }
     setSaving(false);
   };
 
   const completedSubtasks = subtasks.filter(s => s.completed).length;
   const subtaskProgress   = subtasks.length > 0 ? Math.round((completedSubtasks / subtasks.length) * 100) : 0;
+
+  // Assignee XP info
+  const assigneeXp = xpMap?.[task.assignedToId];
+  const assigneeTier = assigneeXp ? getTier(assigneeXp.level || 1) : TITLE_TIERS[0];
+  const assigneeLevel = assigneeXp?.level || 1;
+
+  const isAssignedToMe = task.assignedToId === user?.id;
+  const showReviewTab = task.status === 'COMPLETED' && (task.bonusCoins > 0 || task.openTaskBonus);
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 300, padding: '16px' }}>
@@ -91,16 +140,26 @@ function TaskDetailModal({ task, user, onClose, onRefresh }) {
               </div>
               <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', lineHeight: 1.3 }}>{task.title}</h2>
               {task.description && <p style={{ color: '#a0a0a0', fontSize: '13px', marginTop: '6px', lineHeight: 1.5 }}>{task.description}</p>}
-              <div style={{ display: 'flex', gap: '14px', marginTop: '10px', fontSize: '12px', color: '#666', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '14px', marginTop: '10px', fontSize: '12px', color: '#666', flexWrap: 'wrap', alignItems: 'center' }}>
                 {task.deadline && <span>⏰ {new Date(task.deadline).toLocaleDateString()}</span>}
                 <span style={{ color: '#f5c518', fontWeight: 700 }}>🪙 {task.coinsReward}</span>
                 {subtasks.length > 0 && <span>📝 {completedSubtasks}/{subtasks.length} subtasks</span>}
+                {/* Assignee with title badge */}
+                {task.assignedToId && (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    👤
+                    {assigneeTier.frame !== 'none' && (
+                      <span style={{ fontSize: '10px', background: `${assigneeTier.color}22`, color: assigneeTier.color, borderRadius: '999px', padding: '1px 6px', fontWeight: 700 }}>
+                        {assigneeTier.title} Lv.{assigneeLevel}
+                      </span>
+                    )}
+                  </span>
+                )}
               </div>
             </div>
             <button onClick={onClose} style={{ background: '#222', border: '1px solid #333', color: '#a0a0a0', borderRadius: '8px', width: '30px', height: '30px', cursor: 'pointer', flexShrink: 0, fontSize: '14px' }}>✕</button>
           </div>
 
-          {/* Subtask progress bar */}
           {subtasks.length > 0 && (
             <div style={{ marginTop: '12px' }}>
               <div style={{ background: '#111', borderRadius: '999px', height: '6px', overflow: 'hidden' }}>
@@ -110,12 +169,11 @@ function TaskDetailModal({ task, user, onClose, onRefresh }) {
             </div>
           )}
 
-          {/* Pledge banner */}
           {pledge && (
             <div style={{ marginTop: '10px', background: 'rgba(168,85,247,0.1)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: '10px', padding: '10px 12px', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
               <span>🤝</span>
               <div>
-                <div style={{ fontSize: '12px', color: '#a855f7', fontWeight: 800, marginBottom: '4px', letterSpacing: '0.5px' }}>🤝 COMMITMENT PLEDGE</div>
+                <div style={{ fontSize: '12px', color: '#a855f7', fontWeight: 800, marginBottom: '4px', letterSpacing: '0.5px' }}>COMMITMENT PLEDGE</div>
                 <div style={{ fontSize: '14px', color: '#e9d5ff', fontWeight: 500 }}>{pledge}</div>
               </div>
             </div>
@@ -123,14 +181,15 @@ function TaskDetailModal({ task, user, onClose, onRefresh }) {
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '4px', padding: '12px 24px 0', borderBottom: '1px solid #2a2a2a', flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: '4px', padding: '12px 24px 0', borderBottom: '1px solid #2a2a2a', flexShrink: 0, overflowX: 'auto' }}>
           {[
             { key: 'SUBTASKS', label: `📝 Subtasks ${subtasks.length > 0 ? `(${subtasks.length})` : ''}` },
             { key: 'COMMENTS', label: `💬 Comments ${comments.length > 0 ? `(${comments.length})` : ''}` },
-            ...(task.assignedToId === user?.id ? [{ key: 'PLEDGE', label: '🤝 Pledge' }] : []),
+            ...(isAssignedToMe ? [{ key: 'PLEDGE', label: '🤝 Pledge' }] : []),
+            ...(showReviewTab ? [{ key: 'REVIEW', label: '⚖️ Bonus Review' }] : []),
           ].map(t => (
             <button key={t.key} onClick={() => setTab(t.key)} style={{
-              padding: '8px 14px', borderRadius: '8px 8px 0 0', fontSize: '12px', fontWeight: 600, border: 'none', cursor: 'pointer',
+              padding: '8px 14px', borderRadius: '8px 8px 0 0', fontSize: '12px', fontWeight: 600, border: 'none', cursor: 'pointer', whiteSpace: 'nowrap',
               background: tab === t.key ? '#1a1a1a' : 'transparent',
               color: tab === t.key ? '#f5c518' : '#555',
               borderBottom: tab === t.key ? '2px solid #f5c518' : '2px solid transparent',
@@ -147,24 +206,15 @@ function TaskDetailModal({ task, user, onClose, onRefresh }) {
               {subtasks.length === 0 && <p style={{ color: '#555', fontSize: '13px', textAlign: 'center', padding: '20px' }}>No subtasks yet.</p>}
               {subtasks.map((s, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: '#1a1a1a', borderRadius: '10px', border: '1px solid #2a2a2a' }}>
-                  <button onClick={() => !s.completed && handleCompleteSubtask(s.id)} style={{
-                    width: '20px', height: '20px', borderRadius: '6px', border: s.completed ? 'none' : '2px solid #444',
-                    background: s.completed ? '#22c55e' : 'transparent', cursor: s.completed ? 'default' : 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '12px',
-                  }}>{s.completed ? '✓' : ''}</button>
+                  <button onClick={() => !s.completed && handleCompleteSubtask(s.id)} style={{ width: '20px', height: '20px', borderRadius: '6px', border: s.completed ? 'none' : '2px solid #444', background: s.completed ? '#22c55e' : 'transparent', cursor: s.completed ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '12px' }}>{s.completed ? '✓' : ''}</button>
                   <span style={{ fontSize: '13px', color: s.completed ? '#555' : '#fff', textDecoration: s.completed ? 'line-through' : 'none', flex: 1 }}>{s.title}</span>
                   {s.completed && <span style={{ fontSize: '10px', color: '#444' }}>✓ done</span>}
                 </div>
               ))}
               {task.status !== 'COMPLETED' && (
                 <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                  <input value={subtaskTitle} onChange={e => setSubtaskTitle(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleAddSubtask()}
-                    placeholder="Add subtask..." style={{ flex: 1, background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#fff', padding: '8px 12px', fontSize: '13px', outline: 'none' }} />
-                  <button onClick={handleAddSubtask} disabled={saving || !subtaskTitle.trim()} style={{
-                    background: subtaskTitle.trim() ? '#f5c518' : '#222', color: subtaskTitle.trim() ? '#000' : '#555',
-                    border: 'none', borderRadius: '8px', padding: '8px 14px', fontWeight: 700, cursor: subtaskTitle.trim() ? 'pointer' : 'not-allowed', fontSize: '13px',
-                  }}>Add</button>
+                  <input value={subtaskTitle} onChange={e => setSubtaskTitle(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddSubtask()} placeholder="Add subtask..." style={{ flex: 1, background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#fff', padding: '8px 12px', fontSize: '13px', outline: 'none' }} />
+                  <button onClick={handleAddSubtask} disabled={saving || !subtaskTitle.trim()} style={{ background: subtaskTitle.trim() ? '#f5c518' : '#222', color: subtaskTitle.trim() ? '#000' : '#555', border: 'none', borderRadius: '8px', padding: '8px 14px', fontWeight: 700, cursor: subtaskTitle.trim() ? 'pointer' : 'not-allowed', fontSize: '13px' }}>Add</button>
                 </div>
               )}
             </div>
@@ -181,22 +231,15 @@ function TaskDetailModal({ task, user, onClose, onRefresh }) {
                     <div style={{ maxWidth: '80%', background: isMe ? 'rgba(245,197,24,0.1)' : '#1a1a1a', border: isMe ? '1px solid rgba(245,197,24,0.25)' : '1px solid #2a2a2a', borderRadius: isMe ? '12px 12px 4px 12px' : '12px 12px 12px 4px', padding: '10px 14px' }}>
                       {!isMe && <div style={{ fontSize: '11px', color: '#f5c518', fontWeight: 700, marginBottom: '4px' }}>{c.authorName}</div>}
                       <div style={{ fontSize: '13px', color: '#fff', lineHeight: 1.5 }}>{c.content}</div>
-                      <div style={{ fontSize: '10px', color: '#444', marginTop: '4px', textAlign: 'right' }}>
-                        {new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
+                      <div style={{ fontSize: '10px', color: '#444', marginTop: '4px', textAlign: 'right' }}>{new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                     </div>
                   </div>
                 );
               })}
               <div ref={bottomRef} />
               <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                <input value={commentText} onChange={e => setCommentText(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleAddComment()}
-                  placeholder="Write a comment..." style={{ flex: 1, background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#fff', padding: '8px 12px', fontSize: '13px', outline: 'none' }} />
-                <button onClick={handleAddComment} disabled={saving || !commentText.trim()} style={{
-                  background: commentText.trim() ? '#f5c518' : '#222', color: commentText.trim() ? '#000' : '#555',
-                  border: 'none', borderRadius: '8px', padding: '8px 14px', fontWeight: 700, cursor: commentText.trim() ? 'pointer' : 'not-allowed', fontSize: '13px',
-                }}>Send</button>
+                <input value={commentText} onChange={e => setCommentText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddComment()} placeholder="Write a comment..." style={{ flex: 1, background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px', color: '#fff', padding: '8px 12px', fontSize: '13px', outline: 'none' }} />
+                <button onClick={handleAddComment} disabled={saving || !commentText.trim()} style={{ background: commentText.trim() ? '#f5c518' : '#222', color: commentText.trim() ? '#000' : '#555', border: 'none', borderRadius: '8px', padding: '8px 14px', fontWeight: 700, cursor: commentText.trim() ? 'pointer' : 'not-allowed', fontSize: '13px' }}>Send</button>
               </div>
             </div>
           )}
@@ -211,17 +254,81 @@ function TaskDetailModal({ task, user, onClose, onRefresh }) {
                 </div>
               ) : (
                 <div>
-                  <p style={{ color: '#a0a0a0', fontSize: '13px', marginBottom: '16px', lineHeight: 1.6 }}>
-                    Make a commitment pledge to show your dedication to completing this task. This will be visible to all group members.
-                  </p>
-                  <textarea value={pledgeText} onChange={e => setPledgeText(e.target.value)}
-                    placeholder="I commit to completing this task by..."
-                    rows={4} style={{ width: '100%', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '10px', color: '#fff', padding: '12px', fontSize: '13px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
-                  <button onClick={handlePledge} disabled={saving || !pledgeText.trim()} style={{
-                    marginTop: '10px', background: pledgeText.trim() ? 'rgba(168,85,247,0.2)' : '#222',
-                    color: pledgeText.trim() ? '#a855f7' : '#555', border: pledgeText.trim() ? '1px solid rgba(168,85,247,0.4)' : '1px solid #333',
-                    borderRadius: '10px', padding: '10px 20px', fontWeight: 700, cursor: pledgeText.trim() ? 'pointer' : 'not-allowed', fontSize: '13px',
-                  }}>🤝 Make Pledge</button>
+                  <p style={{ color: '#a0a0a0', fontSize: '13px', marginBottom: '16px', lineHeight: 1.6 }}>Make a commitment pledge to show your dedication. Visible to all group members.</p>
+                  <textarea value={pledgeText} onChange={e => setPledgeText(e.target.value)} placeholder="I commit to completing this task by..." rows={4} style={{ width: '100%', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '10px', color: '#fff', padding: '12px', fontSize: '13px', outline: 'none', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                  <button onClick={handlePledge} disabled={saving || !pledgeText.trim()} style={{ marginTop: '10px', background: pledgeText.trim() ? 'rgba(168,85,247,0.2)' : '#222', color: pledgeText.trim() ? '#a855f7' : '#555', border: pledgeText.trim() ? '1px solid rgba(168,85,247,0.4)' : '1px solid #333', borderRadius: '10px', padding: '10px 20px', fontWeight: 700, cursor: pledgeText.trim() ? 'pointer' : 'not-allowed', fontSize: '13px' }}>🤝 Make Pledge</button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* BONUS REVIEW */}
+          {tab === 'REVIEW' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <p style={{ color: '#a0a0a0', fontSize: '13px', lineHeight: 1.6 }}>
+                Members can flag a bonus as disproportionate or request a review if they think the reward wasn't fair.
+              </p>
+
+              {/* Bonus amount */}
+              <div style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '12px', padding: '16px 18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '22px' }}>🪙</span>
+                <div>
+                  <div style={{ fontSize: '13px', color: '#555', fontWeight: 600 }}>Bonus Coins Awarded</div>
+                  <div style={{ fontSize: '22px', fontWeight: 900, color: '#f5c518' }}>{task.bonusCoins || task.coinsReward || 0}</div>
+                </div>
+              </div>
+
+              {reviewLoading ? (
+                <div style={{ color: '#555', fontSize: '13px', textAlign: 'center', padding: '20px' }}>Loading review status...</div>
+              ) : reviewStatus ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {/* Status */}
+                  <div style={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '12px', padding: '14px 18px' }}>
+                    <div style={{ fontSize: '11px', color: '#555', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Review Status</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '18px' }}>
+                        {reviewStatus.status === 'APPROVED' ? '✅' : reviewStatus.status === 'FLAGGED' ? '🚩' : reviewStatus.status === 'PENDING' ? '⏳' : '💬'}
+                      </span>
+                      <span style={{ fontWeight: 700, color: reviewStatus.status === 'APPROVED' ? '#22c55e' : reviewStatus.status === 'FLAGGED' ? '#ef4444' : '#f5c518' }}>
+                        {reviewStatus.status || 'No review yet'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Flag count */}
+                  {reviewStatus.flagCount > 0 && (
+                    <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '10px', padding: '12px 16px', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <span>🚩</span>
+                      <span style={{ fontSize: '13px', color: '#f87171' }}><strong>{reviewStatus.flagCount}</strong> member{reviewStatus.flagCount > 1 ? 's have' : ' has'} flagged this bonus as disproportionate.</span>
+                    </div>
+                  )}
+
+                  {/* Actions */}
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    {!isAssignedToMe && reviewStatus.status !== 'FLAGGED' && (
+                      <button onClick={handleFlagBonus} disabled={saving} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+                        🚩 Flag as Disproportionate
+                      </button>
+                    )}
+                    {isAssignedToMe && reviewStatus.status !== 'PENDING' && reviewStatus.status !== 'APPROVED' && (
+                      <button onClick={handleRequestReview} disabled={saving} style={{ background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.3)', color: '#f5c518', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+                        💬 Request Bonus Review
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  {!isAssignedToMe && (
+                    <button onClick={handleFlagBonus} disabled={saving} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+                      🚩 Flag as Disproportionate
+                    </button>
+                  )}
+                  {isAssignedToMe && (
+                    <button onClick={handleRequestReview} disabled={saving} style={{ background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.3)', color: '#f5c518', borderRadius: '10px', padding: '10px 16px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+                      💬 Request Bonus Review
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -247,6 +354,7 @@ export default function GroupTasksPage() {
   const [editingTask, setEditingTask]   = useState(null);
   const [editError, setEditError]       = useState('');
   const [priorityUpdating, setPriorityUpdating] = useState(null);
+  const [xpMap, setXpMap]               = useState({});
   const [form, setForm] = useState({ assignedToId: '', title: '', description: '', priority: 'MEDIUM', category: 'WORK', deadline: '', bonusCoins: '' });
   const [editForm, setEditForm] = useState({ title: '', description: '', priority: 'MEDIUM', category: 'WORK', deadline: '' });
 
@@ -266,8 +374,27 @@ export default function GroupTasksPage() {
       ]);
       setTasks(tasksRes.data);
       setGroup(groupRes.data);
+      fetchGroupXp(groupRes.data?.members || []);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
+  };
+
+  const fetchGroupXp = async (members) => {
+    const token = localStorage.getItem('token');
+    const results = {};
+    await Promise.all(members.map(async (m) => {
+      try {
+        const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/xp/user/${m.id ?? m._id}`, { headers: { Authorization: `Bearer ${token}` } });
+        results[m.id ?? m._id] = res.data;
+      } catch {}
+    }));
+    try {
+      const myXp = await getMyXP();
+      const stored = localStorage.getItem('user');
+      const me = stored ? JSON.parse(stored) : null;
+      if (me) results[me.id ?? me._id] = myXp.data;
+    } catch {}
+    setXpMap(results);
   };
 
   const handleCreate = async (e) => {
@@ -308,6 +435,13 @@ export default function GroupTasksPage() {
     if (!userId) return 'Unassigned';
     const member = group?.members?.find(m => (m.id ?? m._id) === userId);
     return member ? (member.fullName || member.username) : 'Unknown';
+  };
+
+  const getMemberXpInfo = (userId) => {
+    const xp = xpMap[userId];
+    if (!xp) return { level: 1, tier: TITLE_TIERS[0] };
+    const level = xp.level || 1;
+    return { level, tier: getTier(level) };
   };
 
   const storedUser = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('user') || '{}') : {};
@@ -378,6 +512,7 @@ export default function GroupTasksPage() {
             const hasSubtasks = (task.subtasks || []).length > 0;
             const hasComments = (task.comments || []).length > 0;
             const hasPledge   = !!task.pledgeMessage;
+            const { level: assigneeLevel, tier: assigneeTier } = getMemberXpInfo(task.assignedToId);
 
             return (
               <div key={i} style={{ background: '#1a1a1a', borderRadius: '14px', border: isOpenTask ? '1px solid rgba(245,197,24,0.4)' : '1px solid #2a2a2a', overflow: 'hidden' }}>
@@ -406,8 +541,16 @@ export default function GroupTasksPage() {
 
                     {task.description && <p style={{ color: '#a0a0a0', fontSize: '12px', marginBottom: '8px', lineHeight: 1.4 }}>{task.description}</p>}
 
-                    <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: '#666', flexWrap: 'wrap', alignItems: 'center' }}>
-                      <span>👤 {getMemberName(task.assignedToId)}</span>
+                    <div style={{ display: 'flex', gap: '10px', fontSize: '11px', color: '#666', flexWrap: 'wrap', alignItems: 'center' }}>
+                      {/* Assignee with title badge */}
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        👤 {getMemberName(task.assignedToId)}
+                        {task.assignedToId && assigneeTier.frame !== 'none' && (
+                          <span style={{ background: `${assigneeTier.color}22`, color: assigneeTier.color, borderRadius: '999px', padding: '1px 6px', fontSize: '10px', fontWeight: 700 }}>
+                            {assigneeTier.title} Lv.{assigneeLevel}
+                          </span>
+                        )}
+                      </span>
                       <span>📂 {task.category}</span>
                       {task.deadline && <span>⏰ {new Date(task.deadline).toLocaleDateString()}</span>}
                       <span style={{ color: '#f5c518', fontWeight: 700 }}>🪙 {task.coinsReward}</span>
@@ -435,9 +578,7 @@ export default function GroupTasksPage() {
 
                   {/* Actions */}
                   <div style={{ display: 'flex', gap: '6px', flexShrink: 0, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <button onClick={() => setSelectedTask(task)} style={{ background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.25)', color: '#f5c518', borderRadius: '8px', padding: '6px 10px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
-                      Details
-                    </button>
+                    <button onClick={() => setSelectedTask(task)} style={{ background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.25)', color: '#f5c518', borderRadius: '8px', padding: '6px 10px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>Details</button>
                     {isOpenTask && !isCreator && (
                       <button className="btn-primary" style={{ fontSize: '12px', padding: '6px 12px' }} onClick={() => claimTask(task.id).then(fetchData)}>🙋 Claim</button>
                     )}
@@ -469,6 +610,7 @@ export default function GroupTasksPage() {
         <TaskDetailModal
           task={selectedTask}
           user={user}
+          xpMap={xpMap}
           onClose={() => setSelectedTask(null)}
           onRefresh={() => { fetchData(); setSelectedTask(null); }}
         />
