@@ -1,4 +1,58 @@
 'use client';
+
+/* ─── Attachments Tab ───────────────────────────────────────── */
+function AttachmentsTab({ task, user, onRefresh }) {
+  const [url, setUrl] = useState('');
+  const [saving, setSaving] = useState(false);
+  const attachments = task.attachments || [];
+
+  const handleAdd = async () => {
+    if (!url.trim()) return;
+    setSaving(true);
+    try {
+      await addTaskAttachment(task.id, { url: url.trim() });
+      setUrl(''); onRefresh();
+    } catch { alert('Failed to add attachment'); }
+    setSaving(false);
+  };
+
+  const handleRemove = async (u) => {
+    try {
+      await removeTaskAttachment(task.id, { url: u });
+      onRefresh();
+    } catch { alert('Failed to remove'); }
+  };
+
+  const isImage = (u) => /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(u);
+  const isPdf   = (u) => /\.pdf$/i.test(u);
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:'10px'}}>
+      {attachments.length === 0 && (
+        <p style={{color:'#555',fontSize:'13px',textAlign:'center',padding:'20px'}}>No attachments yet. Add a URL or image link as evidence.</p>
+      )}
+      {attachments.map((u, i) => (
+        <div key={i} style={{background:'#1a1a1a',border:'1px solid #2a2a2a',borderRadius:'10px',overflow:'hidden'}}>
+          {isImage(u) && (
+            <img src={u} alt="attachment" style={{width:'100%',maxHeight:'180px',objectFit:'cover',display:'block'}} onError={e=>e.target.style.display='none'}/>
+          )}
+          <div style={{padding:'10px 12px',display:'flex',alignItems:'center',gap:'10px'}}>
+            <span style={{fontSize:'16px'}}>{isImage(u)?'🖼️':isPdf(u)?'📄':'🔗'}</span>
+            <a href={u} target="_blank" rel="noopener noreferrer" style={{flex:1,color:'#3b82f6',fontSize:'12px',wordBreak:'break-all',textDecoration:'none'}}>{u}</a>
+            <button onClick={()=>handleRemove(u)} style={{background:'none',border:'none',color:'#ef4444',cursor:'pointer',fontSize:'14px',flexShrink:0}}>🗑️</button>
+          </div>
+        </div>
+      ))}
+      {task.status !== 'COMPLETED' && (
+        <div style={{display:'flex',gap:'8px',marginTop:'4px'}}>
+          <input value={url} onChange={e=>setUrl(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleAdd()} placeholder="Paste image/file URL..." style={{flex:1,background:'#1a1a1a',border:'1px solid #2a2a2a',borderRadius:'8px',color:'#fff',padding:'8px 12px',fontSize:'13px',outline:'none'}}/>
+          <button onClick={handleAdd} disabled={saving||!url.trim()} style={{background:url.trim()?'#f5c518':'#222',color:url.trim()?'#000':'#555',border:'none',borderRadius:'8px',padding:'8px 14px',fontWeight:700,cursor:url.trim()?'pointer':'not-allowed',fontSize:'13px'}}>Add</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import {
@@ -6,6 +60,7 @@ import {
   deleteTask, claimTask, editTask, denyTask, updateTaskPriority,
   addTaskComment, addSubtask, completeSubtask, addCommitmentPledge,
   requestBonusReview, flagBonus, getReviewStatus, getMyXP,
+  addTaskAttachment, removeTaskAttachment, getGroupSuggestions,
 } from '@/lib/api';
 import axios from 'axios';
 
@@ -354,6 +409,9 @@ export default function GroupTasksPage() {
   const [editingTask, setEditingTask]   = useState(null);
   const [editError, setEditError]       = useState('');
   const [priorityUpdating, setPriorityUpdating] = useState(null);
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [xpMap, setXpMap]               = useState({});
   const [form, setForm] = useState({ assignedToId: '', title: '', description: '', priority: 'MEDIUM', category: 'WORK', deadline: '', bonusCoins: '' });
   const [editForm, setEditForm] = useState({ title: '', description: '', priority: 'MEDIUM', category: 'WORK', deadline: '' });
@@ -395,6 +453,15 @@ export default function GroupTasksPage() {
       if (me) results[me.id ?? me._id] = myXp.data;
     } catch {}
     setXpMap(results);
+  };
+
+  const handleLoadSuggestions = async () => {
+    setSuggestionsLoading(true); setShowSuggestions(true);
+    try {
+      const res = await getGroupSuggestions(groupId);
+      setSuggestions(res.data);
+    } catch { setSuggestions([]); }
+    setSuggestionsLoading(false);
   };
 
   const handleCreate = async (e) => {
@@ -468,7 +535,10 @@ export default function GroupTasksPage() {
           <h1 style={{ fontSize: '24px', fontWeight: 800 }}>✅ Group Tasks</h1>
           <p style={{ color: '#a0a0a0', marginTop: '2px', fontSize: '14px' }}>{group?.name}</p>
         </div>
-        <button className="btn-primary" onClick={() => setShowCreate(true)}>+ Assign Task</button>
+        <div style={{display:"flex",gap:"8px"}}>
+          <button className="btn-outline" onClick={handleLoadSuggestions} style={{fontSize:"13px"}}>💡 Suggestions</button>
+          <button className="btn-primary" onClick={() => setShowCreate(true)}>+ Assign Task</button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -602,6 +672,50 @@ export default function GroupTasksPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+
+      {/* Suggestions Modal */}
+      {showSuggestions && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.8)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:300,padding:'16px'}}>
+          <div style={{background:'#141414',borderRadius:'20px',border:'1px solid #2a2a2a',width:'100%',maxWidth:'520px',maxHeight:'80vh',display:'flex',flexDirection:'column'}}>
+            <div style={{padding:'20px 24px 16px',borderBottom:'1px solid #2a2a2a',display:'flex',justifyContent:'space-between',alignItems:'center',flexShrink:0}}>
+              <div>
+                <h2 style={{fontSize:'17px',fontWeight:800}}>💡 AI Task Suggestions</h2>
+                <p style={{color:'#555',fontSize:'12px',marginTop:'2px'}}>Based on your group's task history</p>
+              </div>
+              <button onClick={()=>setShowSuggestions(false)} style={{background:'#222',border:'1px solid #333',color:'#a0a0a0',borderRadius:'8px',width:'30px',height:'30px',cursor:'pointer',fontSize:'14px'}}>✕</button>
+            </div>
+            <div style={{overflowY:'auto',padding:'16px 24px',flex:1}}>
+              {suggestionsLoading ? (
+                <div style={{textAlign:'center',padding:'40px',color:'#555',fontSize:'13px'}}>Loading suggestions...</div>
+              ) : suggestions.length === 0 ? (
+                <div style={{textAlign:'center',padding:'40px',color:'#555',fontSize:'13px'}}>No suggestions available yet. Complete more tasks first!</div>
+              ) : (
+                <div style={{display:'flex',flexDirection:'column',gap:'10px'}}>
+                  {suggestions.map((s,i) => (
+                    <div key={i} style={{background:'#1a1a1a',border:'1px solid #2a2a2a',borderRadius:'12px',padding:'14px 16px'}}>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:'10px'}}>
+                        <div style={{flex:1}}>
+                          <div style={{fontWeight:700,fontSize:'14px',color:'#fff',marginBottom:'4px'}}>{s.title}</div>
+                          <div style={{fontSize:'11px',color:'#555',marginBottom:'8px'}}>{s.reason}</div>
+                          <div style={{display:'flex',gap:'6px'}}>
+                            <span style={{fontSize:'10px',padding:'2px 8px',borderRadius:'999px',background:'rgba(245,197,24,0.15)',color:'#f5c518',fontWeight:600}}>{s.category}</span>
+                            <span style={{fontSize:'10px',padding:'2px 8px',borderRadius:'999px',background:'rgba(59,130,246,0.15)',color:'#3b82f6',fontWeight:600}}>{s.priority}</span>
+                          </div>
+                        </div>
+                        <button onClick={()=>{
+                          setForm(f=>({...f,title:s.title,category:s.category,priority:s.priority}));
+                          setShowSuggestions(false); setShowCreate(true);
+                        }} style={{background:'rgba(245,197,24,0.1)',border:'1px solid rgba(245,197,24,0.3)',color:'#f5c518',borderRadius:'8px',padding:'6px 12px',fontSize:'12px',cursor:'pointer',fontWeight:600,whiteSpace:'nowrap'}}>Use this</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

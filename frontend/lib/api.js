@@ -96,6 +96,7 @@ export const removePlatformUser = (userId) => API.delete(`/superadmin/users/${us
 
 /* XP & ANALYTICS */
 export const getMyXP = () => API.get('/xp/me');
+export const getGroupMemberAnalytics = (groupId) => API.get(`/analytics/group/${groupId}/members`);
 export const getGroupAnalytics = (groupId) => API.get(`/analytics/group/${groupId}`);
 export const logAnalyticsEvent = (data) => API.post('/analytics/event', data);
 
@@ -137,3 +138,7 @@ export const getNotifications = () => API.get('/notifications');
 export const getUnreadCount = () => API.get('/notifications/unread-count');
 export const markAllRead = () => API.post('/notifications/mark-all-read');
 export const markNotificationRead = (id) => API.post(`/notifications/${id}/read`);
+
+export const addTaskAttachment   = (taskId, data) => API.post(`/tasks/${taskId}/attachments`, data);
+export const removeTaskAttachment= (taskId, data) => API.delete(`/tasks/${taskId}/attachments`, { data });
+export const getGroupSuggestions = (groupId) => API.get(`/suggestions/group/${groupId}`);

@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Pallavi Sable — Evaluation</title>
+<style>
+:root{
+  --bg:#0c0c14;
+  --surface:#13131f;
+  --surface2:#181826;
+  --line:rgba(255,255,255,0.08);
+  --text:#eef0f5;
+  --muted:#9094a6;
+  --gold:#f0c44a;
+  --cyan:#4af0e8;
+  --purple:#7b6ef6;
+  --green:#7be08a;
+  --mono:'Courier New',monospace;
+  --serif:'Georgia',serif;
+  --sans:-apple-system,'Inter',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  overflow-x:hidden;
+  line-height:1.6;
+}
+
+/* PROGRESS BAR */
+#progress{
+  position:fixed;top:0;left:0;height:3px;width:0;
+  background:linear-gradient(90deg,var(--gold),var(--cyan));
+  z-index:1000;transition:width .2s;
+  box-shadow:0 0 8px rgba(240,196,74,.6);
+}
+
+/* NAV */
+nav{
+  position:fixed;top:0;left:0;right:0;
+  background:rgba(12,12,20,.96);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+  height:50px;display:flex;align-items:center;
+  justify-content:space-between;padding:0 16px;z-index:999;
+}
+.brand{font-family:var(--mono);font-size:.72rem;color:var(--gold);letter-spacing:.12em;}
+.nav-links{display:flex;gap:4px;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+.nav-links::-webkit-scrollbar{display:none;}
+.nav-links a{
+  font-family:var(--mono);font-size:.62rem;color:var(--muted);
+  letter-spacing:.08em;text-decoration:none;white-space:nowrap;
+  padding:5px 9px;border-radius:3px;border:1px solid transparent;
+  transition:all .2s;
+}
+.nav-links a:hover,.nav-links a.active{color:var(--gold);border-color:rgba(240,196,74,.3);}
+
+/* SECTIONS */
+section{
+  min-height:100vh;padding:70px 16px 48px;
+  display:flex;align-items:flex-start;justify-content:center;
+}
+.wrap{max-width:680px;width:100%;padding-top:20px;}
+
+/* EYEBROW */
+.eyebrow{
+  font-family:var(--mono);font-size:.68rem;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--cyan);margin-bottom:14px;display:block;
+}
+
+/* HERO */
+#home .name{
+  font-family:var(--serif);font-weight:700;
+  font-size:clamp(2rem,9vw,3.4rem);
+  background:linear-gradient(135deg,#fff 30%,var(--gold));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  line-height:1.1;margin-bottom:8px;
+}
+#home .role{
+  font-family:var(--mono);font-size:.82rem;color:var(--muted);
+  letter-spacing:.08em;margin-bottom:32px;
+}
+#home .headline p{
+  font-family:var(--serif);
+  font-size:clamp(1.1rem,4vw,1.5rem);
+  line-height:1.45;margin-bottom:6px;
+}
+#home .headline .em{color:var(--gold);font-style:italic;}
+#home .headline .em2{color:var(--cyan);}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:36px;}
+.stat{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:8px;padding:16px 12px;text-align:center;
+}
+.stat .num{
+  font-family:var(--serif);font-size:clamp(1.6rem,5vw,2.4rem);
+  font-weight:700;color:var(--text);line-height:1;
+}
+.stat .num .accent{color:var(--cyan);}
+.stat .label{
+  font-family:var(--mono);font-size:.6rem;color:var(--muted);
+  letter-spacing:.12em;text-transform:uppercase;margin-top:6px;
+  line-height:1.4;
+}
+
+.begin-btn{
+  margin-top:32px;display:inline-flex;align-items:center;gap:8px;
+  background:transparent;border:1.5px solid var(--gold);color:var(--gold);
+  font-family:var(--mono);font-size:.8rem;letter-spacing:.1em;
+  text-transform:uppercase;padding:13px 24px;border-radius:3px;
+  cursor:pointer;transition:all .25s;
+}
+.begin-btn:hover{background:var(--gold);color:#0c0c14;}
+
+/* CARDS */
+#projects .cards{display:flex;flex-direction:column;gap:14px;margin-top:8px;}
+.card{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:8px;padding:20px 18px;cursor:pointer;
+  transition:border-color .25s,transform .25s;
+  position:relative;overflow:hidden;
+}
+.card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--gold),var(--cyan));
+  transform:scaleX(0);transform-origin:left;transition:transform .3s;
+}
+.card:hover{border-color:rgba(240,196,74,.3);transform:translateY(-3px);}
+.card:hover::before{transform:scaleX(1);}
+.card .tag{
+  font-family:var(--mono);font-size:.65rem;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--cyan);margin-bottom:10px;display:block;
+}
+.card h3{font-family:var(--serif);font-size:1.3rem;font-weight:600;margin-bottom:8px;}
+.card p{color:var(--muted);font-size:.88rem;line-height:1.6;margin-bottom:14px;}
+.card .techs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+.card .techs span{
+  font-family:var(--mono);font-size:.62rem;color:var(--text);
+  background:var(--surface2);border:1px solid var(--line);
+  padding:3px 9px;border-radius:20px;
+}
+.card .cta{
+  font-family:var(--mono);font-size:.75rem;color:var(--gold);
+  display:flex;align-items:center;gap:6px;
+}
+
+/* DETAIL SECTIONS */
+.back-link{
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--mono);font-size:.72rem;color:var(--muted);
+  cursor:pointer;margin-bottom:24px;transition:color .2s;
+  background:none;border:none;padding:0;
+}
+.back-link:hover{color:var(--cyan);}
+
+.sub-header{margin-bottom:28px;}
+.sub-header .tag{
+  font-family:var(--mono);font-size:.68rem;letter-spacing:.2em;
+  text-transform:uppercase;margin-bottom:10px;display:block;
+}
+.sub-header h2{font-family:var(--serif);font-size:clamp(1.6rem,6vw,2.4rem);font-weight:600;}
+
+.detail-grid{display:flex;flex-direction:column;gap:14px;}
+.detail-block{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:8px;padding:20px 18px;
+  border-left:3px solid transparent;
+  transition:transform .2s;
+}
+.detail-block:hover{transform:translateX(3px);}
+.detail-block.dl-what{border-left-color:var(--purple);}
+.detail-block.dl-did{border-left-color:var(--cyan);}
+.detail-block.dl-wrong{border-left-color:var(--gold);}
+.detail-block.dl-changed{border-left-color:var(--green);}
+.detail-block .dlabel{
+  font-family:var(--mono);font-size:.65rem;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:block;
+}
+.detail-block h4{font-family:var(--serif);font-size:1.1rem;font-weight:600;margin-bottom:8px;}
+.detail-block p{color:#c4c7d4;font-size:.9rem;line-height:1.7;}
+.detail-block p strong{color:var(--text);}
+
+.module-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+  gap:8px;margin-top:12px;
+}
+.module-grid span{
+  font-family:var(--mono);font-size:.65rem;background:var(--surface2);
+  border:1px solid var(--line);border-radius:4px;padding:7px 8px;
+  text-align:center;color:var(--cyan);
+}
+
+.demo-cta{
+  margin-top:14px;display:inline-flex;align-items:center;gap:10px;
+  background:linear-gradient(135deg,var(--gold),#f5d97f);
+  color:#0c0c14;font-family:var(--mono);font-weight:700;
+  font-size:.8rem;padding:13px 22px;border-radius:4px;
+  text-decoration:none;letter-spacing:.04em;
+  transition:transform .2s,box-shadow .2s;
+}
+.demo-cta:hover{transform:scale(1.02);box-shadow:0 8px 24px -8px rgba(240,196,74,.5);}
+.dot-live{
+  width:7px;height:7px;border-radius:50%;background:#1a1a1a;
+  animation:pulse 1.5s infinite;flex-shrink:0;
+}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+/* TIMELINE */
+#timeline-wrap{padding-top:4px;}
+.timeline{position:relative;padding-left:28px;}
+.timeline::before{
+  content:'';position:absolute;left:6px;top:8px;bottom:8px;width:2px;
+  background:linear-gradient(to bottom,var(--purple),var(--cyan),var(--gold),var(--green));
+}
+.t-item{position:relative;margin-bottom:28px;}
+.t-item::before{
+  content:'';position:absolute;left:-28px;top:6px;
+  width:12px;height:12px;border-radius:50%;
+  background:var(--bg);border:2px solid var(--cyan);
+}
+.t-item .week{
+  font-family:var(--mono);font-size:.68rem;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--cyan);margin-bottom:5px;display:block;
+}
+.t-item p{font-family:var(--serif);font-size:clamp(1rem,3.5vw,1.2rem);line-height:1.5;}
+.t-item p .hl{color:var(--gold);font-weight:600;}
+
+/* INSIGHTS */
+.insights{display:flex;flex-direction:column;gap:14px;margin-top:8px;}
+.insight{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:8px;padding:20px 18px;
+  transition:border-color .25s;
+}
+.insight:hover{border-color:rgba(74,240,232,.3);}
+.insight .num{
+  font-family:var(--mono);font-size:.68rem;color:var(--purple);
+  letter-spacing:.18em;margin-bottom:10px;display:block;
+}
+.insight h3{font-family:var(--serif);font-size:1.1rem;font-weight:600;margin-bottom:8px;color:var(--gold);}
+.insight p{color:#c4c7d4;font-size:.9rem;line-height:1.65;}
+
+/* WHY KEEP ME */
+.reasons{display:flex;flex-direction:column;gap:12px;margin-top:8px;margin-bottom:20px;}
+.reason{
+  display:flex;gap:16px;align-items:flex-start;
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:8px;padding:18px 16px;
+  transition:border-color .25s;
+}
+.reason:hover{border-color:rgba(240,196,74,.3);}
+.reason .rnum{
+  font-family:var(--serif);font-size:1.8rem;font-weight:700;
+  color:var(--gold);line-height:1;min-width:36px;flex-shrink:0;
+}
+.reason p{color:#c4c7d4;font-size:.9rem;line-height:1.7;}
+.reason p strong{color:var(--text);}
+
+.boxes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.box{
+  background:var(--surface2);border:1px solid var(--line);
+  border-radius:6px;padding:16px 10px;text-align:center;
+  transition:border-color .25s;
+}
+.box:hover{border-color:var(--cyan);}
+.box .icon{font-size:1.4rem;margin-bottom:8px;}
+.box .label{font-family:var(--mono);font-size:.65rem;color:var(--text);letter-spacing:.04em;line-height:1.4;}
+
+/* CLOSE */
+#close .close-lines{margin-bottom:36px;}
+#close .close-lines p{
+  font-family:var(--serif);
+  font-size:clamp(1.1rem,4vw,1.6rem);
+  line-height:1.5;margin-bottom:8px;
+}
+#close .close-lines p.dim{color:var(--muted);font-size:.9em;}
+#close .gold{color:var(--gold);}
+#close .cyan{color:var(--cyan);}
+#close .quiet-line{
+  font-family:var(--mono);font-size:.8rem;color:var(--muted);
+  letter-spacing:.1em;margin-top:28px;font-style:italic;
+}
+#close .signature{
+  font-family:var(--serif);font-size:1.5rem;font-weight:600;margin-top:24px;
+  background:linear-gradient(135deg,#fff,var(--gold));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+
+/* SECTION HEADERS */
+.section-title{
+  font-family:var(--serif);font-size:clamp(1.5rem,6vw,2.2rem);
+  font-weight:600;margin-bottom:6px;
+}
+.section-sub{
+  font-family:var(--mono);font-size:.78rem;color:var(--muted);
+  margin-bottom:28px;letter-spacing:.04em;
+}
+
+/* HIDDEN SECTIONS */
+.hidden{display:none;}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<nav>
+  <span class="brand">PALLAVI SABLE · 40 DAYS</span>
+  <div class="nav-links">
+    <a href="#home" class="active">Intro</a>
+    <a href="#projects">Projects</a>
+    <a href="#timeline">Timeline</a>
+    <a href="#insights">Insights</a>
+    <a href="#why">Why Keep Me</a>
+    <a href="#close">Close</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="home">
+  <div class="wrap">
+    <span class="eyebrow">Evaluation · 40 Days</span>
+    <div class="name">Pallavi Sable</div>
+    <div class="role">Backend Developer · Shakham Inc.</div>
+    <div class="headline">
+      <p>First office. Three projects. <span class="em">Steep learning curve.</span></p>
+      <p>Here's what I <span class="em2">learned</span>, where I <span class="em">failed</span>,</p>
+      <p>and what I <span class="em2">delivered</span>.</p>
+    </div>
+    <div class="stats">
+      <div class="stat">
+        <div class="num"><span class="counter" data-target="3">3</span></div>
+        <div class="label">Parallel Projects</div>
+      </div>
+      <div class="stat">
+        <div class="num"><span class="counter accent" data-target="78">78</span><span class="accent">+</span></div>
+        <div class="label">API Endpoints Shipped</div>
+      </div>
+      <div class="stat">
+        <div class="num"><span class="counter" data-target="14">14</span></div>
+        <div class="label">Modules · QuestHive</div>
+      </div>
+    </div>
+    <button class="begin-btn" onclick="document.getElementById('projects').scrollIntoView({behavior:'smooth'})">
+      Begin →
+    </button>
+  </div>
+</section>
+
+<!-- PROJECTS CARDS -->
+<section id="projects">
+  <div class="wrap">
+    <div class="section-title">What I carried for 40 days</div>
+    <div class="section-sub">Three domains. One person. Tap any card to see what happened inside it.</div>
+    <div class="cards">
+      <div class="card" onclick="showDetail('cms')">
+        <span class="tag">Management</span>
+        <h3>CMS‑EMS</h3>
+        <p>Managing a live internal platform — tracking who's building what, keeping recruitment, bug tracking and project modules moving forward.</p>
+        <div class="techs"><span>Bug Tracking Tool</span><span>Recruitment</span><span>PMS</span><span>Miro</span></div>
+        <div class="cta">See my journey <span>→</span></div>
+      </div>
+      <div class="card" onclick="showDetail('qh')">
+        <span class="tag">Development</span>
+        <h3>QuestHive</h3>
+        <p>A gamified family task and rewards platform — designed, built and deployed entirely from scratch, solo.</p>
+        <div class="techs"><span>Spring Boot 3.5</span><span>Java 21</span><span>MongoDB</span><span>Next.js</span></div>
+        <div class="cta">See my journey <span>→</span></div>
+      </div>
+      <div class="card" onclick="showDetail('sga')">
+        <span class="tag">Research · Client</span>
+        <h3>SGA — Lyros</h3>
+        <p>Stepping into an AI reasoning platform being built from the ground up for a real client — and figuring out where I fit.</p>
+        <div class="techs"><span>RAG Pipeline</span><span>Webhooks</span><span>Google Drive API</span><span>Multi-Agent</span></div>
+        <div class="cta">See my journey <span>→</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CMS DETAIL -->
+<section id="detail-cms" class="hidden">
+  <div class="wrap">
+    <button class="back-link" onclick="hideDetail('cms')">← Back to Projects</button>
+    <div class="sub-header">
+      <span class="tag" style="color:var(--purple)">01 · Management</span>
+      <h2>CMS‑EMS</h2>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-block dl-what">
+        <span class="dlabel">What it was</span>
+        <h4>An internal platform with four moving parts</h4>
+        <p>CMS‑EMS is Shakham's internal platform covering content management, a recruitment model, a bug tracking tool, and an employee/project management system. My job was to understand each module, who was building what, and keep things moving.</p>
+      </div>
+      <div class="detail-block dl-did">
+        <span class="dlabel">What I did</span>
+        <h4>Ran the coordination layer</h4>
+        <p>Ran daily standups, coordinated <strong>Aryan, Ghanshyam, Shubham and Prathamesh</strong> across the Bug Tracking Tool, Recruitment Model and PMS. Tracked the deployment pipeline, escalated blockers, and kept Ankita informed.</p>
+      </div>
+      <div class="detail-block dl-wrong">
+        <span class="dlabel">Where I went wrong</span>
+        <h4>Missed a deployment deadline by one day</h4>
+        <p>I wasn't taking updates consistently — I assumed if I told someone, it would get done. When asked for proof, I had nothing written. <strong>That's when I learned that's not how it works.</strong></p>
+      </div>
+      <div class="detail-block dl-changed">
+        <span class="dlabel">What I changed</span>
+        <h4>Logged everything, verified everything</h4>
+        <p>Started logging every task on Miro. Took updates daily, sometimes more. Kept everything in writing instead of verbal commitments. Delivered the missed item the very next morning and sent written updates before every leave day.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- QUESTHIVE DETAIL -->
+<section id="detail-qh" class="hidden">
+  <div class="wrap">
+    <button class="back-link" onclick="hideDetail('qh')">← Back to Projects</button>
+    <div class="sub-header">
+      <span class="tag" style="color:var(--cyan)">02 · Development</span>
+      <h2>QuestHive</h2>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-block dl-what">
+        <span class="dlabel">What it is</span>
+        <h4>A gamified family / team task platform</h4>
+        <p>Members get XP, level up, earn coins, compete on leaderboards, and redeem rewards. Built to make accountability — for chores, tasks, and shared responsibilities — actually fun.</p>
+      </div>
+      <div class="detail-block dl-did">
+        <span class="dlabel">What I built — solo</span>
+        <h4>14 modules, 78+ endpoints, full production stack</h4>
+        <p>Full authentication with OTP and hCaptcha, real-time WebSocket group chat, a fairness engine with peer review, XP levelling across 20 levels, and a SuperAdmin analytics console. Spring Boot 3.5 + MongoDB Atlas + Next.js, deployed on Render and Vercel.</p>
+        <div class="module-grid">
+          <span>Auth & OTP</span><span>XP / Levelling</span><span>Group Chat</span><span>Fairness Engine</span>
+          <span>Peer Review</span><span>Subtasks</span><span>Notifications</span><span>SuperAdmin</span>
+          <span>Onboarding</span><span>Group Health</span><span>Badges</span><span>Leaderboards</span>
+          <span>Invites</span><span>Analytics</span>
+        </div>
+      </div>
+      <div class="detail-block dl-wrong">
+        <span class="dlabel">Proudest feature</span>
+        <h4>The fairness engine</h4>
+        <p>If three or more group members flag a reward as unfair, the task auto-reopens and everyone is notified. I designed and built this logic entirely from scratch — no reference, no template. It's the feature that made the platform feel <strong>fair</strong>, not just functional.</p>
+      </div>
+      <div class="detail-block dl-changed">
+        <span class="dlabel">Live demo</span>
+        <h4>Running on localhost right now</h4>
+        <p>The backend is running locally — switch over whenever you're ready and I'll walk through it live.</p>
+        <a class="demo-cta" href="http://localhost:3000" target="_blank"><span class="dot-live"></span> Open QuestHive — localhost:3000</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SGA DETAIL -->
+<section id="detail-sga" class="hidden">
+  <div class="wrap">
+    <button class="back-link" onclick="hideDetail('sga')">← Back to Projects</button>
+    <div class="sub-header">
+      <span class="tag" style="color:var(--gold)">03 · Research · Client</span>
+      <h2>SGA — Lyros</h2>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-block dl-what">
+        <span class="dlabel">What it was</span>
+        <h4>A multi-agent AI reasoning platform — for a real client</h4>
+        <p>Lyros is an AI-powered business intelligence and strategic decision-making platform. In the first two weeks, every term was new — orchestrators, RAG pipelines, vector databases, embeddings. I had to get comfortable, fast.</p>
+      </div>
+      <div class="detail-block dl-did">
+        <span class="dlabel">What I contributed</span>
+        <h4>File architecture + a working webhook prototype</h4>
+        <p>Designed the storage architecture for core strategic documents. Built a working prototype where any file change in Google Drive instantly notifies a server via webhook, end to end in under 5 seconds, no polling. Also researched how agents should be assigned depth levels based on query relevance.</p>
+      </div>
+      <div class="detail-block dl-wrong">
+        <span class="dlabel">How I learned</span>
+        <h4>Built to understand, not just read</h4>
+        <p>Asked questions in every meeting. Got comfortable with the terminology week by week. By the end, I could explain the architecture in my own words.</p>
+      </div>
+      <div class="detail-block dl-changed">
+        <span class="dlabel">What this showed me</span>
+        <h4>How a real industry AI product actually gets built</h4>
+        <p>Not just the code — the decisions, the tradeoffs, the documentation, the architecture thinking behind every choice. <strong>Unfamiliar is temporary. Curious is permanent.</strong></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TIMELINE -->
+<section id="timeline">
+  <div class="wrap">
+    <div class="section-title">What these 40 days actually felt like</div>
+    <div style="height:20px;"></div>
+    <div class="timeline" id="timeline-wrap">
+      <div class="t-item">
+        <span class="week">Week 1</span>
+        <p>Everything was new — the terms, the tools, the team. <span class="hl">I took notes and started piecing it together.</span></p>
+      </div>
+      <div class="t-item">
+        <span class="week">Week 2</span>
+        <p>Learned a hard lesson about visibility — <span class="hl">verbal updates don't count unless they're written down.</span></p>
+      </div>
+      <div class="t-item">
+        <span class="week">Week 3</span>
+        <p>Rebuilt my workflow around it. <span class="hl">Logging everything. Verifying everything.</span></p>
+      </div>
+      <div class="t-item">
+        <span class="week">Week 4</span>
+        <p>Shipped a feature I built entirely — <span class="hl">with enhancements, coordination and research.</span></p>
+      </div>
+      <div class="t-item">
+        <span class="week">Week 6</span>
+        <p>Could explain a multi-layer AI architecture in my own words — <span class="hl">something I'd never heard of six weeks earlier.</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INSIGHTS -->
+<section id="insights">
+  <div class="wrap">
+    <div class="section-title">What real work actually taught me</div>
+    <div class="insights">
+      <div class="insight">
+        <span class="num">01</span>
+        <h3>"Verbal is invisible."</h3>
+        <p>If it's not written down — on Miro, in a message, in a doc — it didn't happen. I learned this the hard way, and it changed how I work permanently.</p>
+      </div>
+      <div class="insight">
+        <span class="num">02</span>
+        <h3>"Ownership is knowing where your boundary is."</h3>
+        <p>Understanding exactly what was mine to own versus mine to track — that clarity changed how I coordinated everything afterward.</p>
+      </div>
+      <div class="insight">
+        <span class="num">03</span>
+        <h3>"Communication is harder than code."</h3>
+        <p>I could build 78 endpoints alone. What I couldn't do at first was make sure the right person knew the right thing at the right time. That's the actual hard problem.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY KEEP ME -->
+<section id="why">
+  <div class="wrap">
+    <div class="section-title">Why keep me</div>
+    <div style="height:16px;"></div>
+    <div class="reasons">
+      <div class="reason">
+        <span class="rnum">01</span>
+        <p><strong>I already know your systems</strong> — CMS‑EMS, PMS, the Bug Tracking Tool, the Lyros architecture, the deployment pipeline, and how this team works. Replacing me means starting that from zero.</p>
+      </div>
+      <div class="reason">
+        <span class="rnum">02</span>
+        <p><strong>I built something production-grade, solo</strong> — QuestHive. 14 modules, 78+ endpoints, real authentication, WebSocket chat, a fairness engine, XP levelling, SuperAdmin analytics. Shipped and deployed, not a demo.</p>
+      </div>
+      <div class="reason">
+        <span class="rnum">03</span>
+        <p><strong>I corrected in real time.</strong> The day after my mistakes were pointed out, I changed how I worked — every task on Miro logged with a written update. That kind of self-correction usually takes much longer to learn.</p>
+      </div>
+    </div>
+    <div class="boxes">
+      <div class="box"><div class="icon">📋</div><div class="label">Every task documented</div></div>
+      <div class="box"><div class="icon">🤝</div><div class="label">Tighter coordination</div></div>
+      <div class="box"><div class="icon">⚡</div><div class="label">More depth, faster</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- CLOSE -->
+<section id="close">
+  <div class="wrap">
+    <div class="close-lines">
+      <p>You don't just get a backend developer.</p>
+      <p>You get someone who already <span class="gold">failed here</span>, already <span class="cyan">corrected here</span>, and already built something real here.</p>
+      <p class="dim">The learning curve is done. <span class="gold">What comes next is contribution.</span></p>
+    </div>
+    <div class="quiet-line">Unfamiliar is temporary. Curious is permanent.</div>
+    <div class="signature">Pallavi Sable</div>
+  </div>
+</section>
+
+<script>
+// Progress bar
+window.addEventListener('scroll', () => {
+  const total = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = total > 0 ? (window.scrollY / total) * 100 : 0;
+  document.getElementById('progress').style.width = pct + '%';
+});
+
+// Active nav
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-links a');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(a => a.classList.remove('active'));
+      const id = e.target.id;
+      const match = document.querySelector(`.nav-links a[href="#${id}"]`);
+      if (match) match.classList.add('active');
+    }
+  });
+}, { threshold: 0.4 });
+sections.forEach(s => { if (!s.classList.contains('hidden')) observer.observe(s); });
+
+// Detail show/hide
+function showDetail(key) {
+  document.getElementById('projects').classList.add('hidden');
+  document.getElementById('detail-' + key).classList.remove('hidden');
+  window.scrollTo({ top: document.getElementById('detail-' + key).offsetTop - 60, behavior: 'smooth' });
+}
+function hideDetail(key) {
+  document.getElementById('detail-' + key).classList.add('hidden');
+  document.getElementById('projects').classList.remove('hidden');
+  window.scrollTo({ top: document.getElementById('projects').offsetTop - 60, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>

@@ -3,6 +3,7 @@ package com.questhive.questhive.service;
 import com.questhive.questhive.model.Group;
 import com.questhive.questhive.model.User;
 import com.questhive.questhive.model.Task;
+import com.questhive.questhive.model.XpRecord;
 import com.questhive.questhive.repository.GroupRepository;
 import com.questhive.questhive.repository.UserRepository;
 import com.questhive.questhive.repository.TaskRepository;
@@ -186,4 +187,49 @@ public class AnalyticsService {
         ));
         return result;
     }
+
+    public java.util.List<java.util.Map<String, Object>> getGroupMemberAnalytics(String groupId) {
+        List<Task> groupTasks = taskRepository.findByGroupId(groupId);
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new RuntimeException("Group not found"));
+        List<String> memberIds = group.getMemberIds();
+        XpService xpCalc = new XpService(xpRepository, userRepository);
+
+        return memberIds.stream().map(memberId -> {
+            User user = userRepository.findById(memberId).orElse(null);
+            if (user == null) return null;
+
+            List<Task> assigned = groupTasks.stream()
+                    .filter(t -> memberId.equals(t.getAssignedToId())).toList();
+            long completed = assigned.stream().filter(t -> t.getStatus() == Task.Status.COMPLETED).count();
+            long denied    = assigned.stream().filter(t -> t.getStatus() == Task.Status.DENIED).count();
+            long pending   = assigned.stream().filter(t ->
+                    t.getStatus() == Task.Status.PENDING ||
+                    t.getStatus() == Task.Status.IN_PROGRESS).count();
+            int completionRate = assigned.isEmpty() ? 0
+                    : (int) Math.round(completed * 100.0 / assigned.size());
+
+            int totalXp = xpRepository.findByUserId(memberId).stream()
+                    .mapToInt(XpRecord::getXpAmount).sum();
+            int level = xpCalc.calculateLevel(totalXp);
+
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("userId",                memberId);
+            m.put("fullName",              user.getFullName() != null ? user.getFullName() : user.getUsername());
+            m.put("avatarColor",           user.getAvatarColor());
+            m.put("titleBadge",            xpCalc.getTitle(level));
+            m.put("level",                 level);
+            m.put("totalXp",               totalXp);
+            m.put("coins",                 user.getCoins());
+            m.put("streak",                user.getStreak());
+            m.put("tasksAssigned",         assigned.size());
+            m.put("tasksCompleted",        (int) completed);
+            m.put("tasksDenied",           (int) denied);
+            m.put("tasksPending",          (int) pending);
+            m.put("completionRatePercent", completionRate);
+            m.put("isAdmin",               memberId.equals(group.getAdminId()));
+            return m;
+        }).filter(Objects::nonNull).collect(Collectors.toList());
+    }
+
 }
