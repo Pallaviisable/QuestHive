@@ -38,6 +38,9 @@ public class User {
     private String status = "ACTIVE";
     private boolean hasSeenTour = false;
 
+    @Indexed(unique = true)
+    private String inviteCode;
+
     public User() {
         this.coins = 0;
         this.streak = 0;

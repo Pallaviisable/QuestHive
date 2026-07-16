@@ -16,6 +16,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 
 @Service
@@ -35,15 +36,17 @@ public class AuthService {
     @Value("${hcaptcha.verify.url:https://hcaptcha.com/siteverify}")
     private String hcaptchaVerifyUrl;
 
+    // New signup flow: a single `code` field can be either
+    //   (a) an existing user's personal invite code -> new user becomes FAMILY_ADMIN, no group join
+    //   (b) a group invite token (existing Invite mechanism) -> new user becomes MEMBER, auto-joined to that group
     public void register(String fullName, String username, String email,
-                         String password, String inviteToken, String captchaToken) {
+                         String password, String code, String captchaToken) {
         verifyCaptcha(captchaToken);
 
-        Invite invite = inviteService.validateToken(inviteToken);
-        if (!invite.getEmail().equalsIgnoreCase(email.trim())) {
-            throw new RuntimeException(
-                    "This invite was sent to " + invite.getEmail() + ". Use that email to register.");
+        if (code == null || code.trim().isBlank()) {
+            throw new RuntimeException("An invite code is required to sign up.");
         }
+        String trimmedCode = code.trim();
 
         if (userRepository.existsByEmail(email.trim().toLowerCase())) {
             throw new RuntimeException("An account with this email already exists. Please login.");
@@ -57,7 +60,38 @@ public class AuthService {
             throw new RuntimeException("Full name must be at least 3 characters.");
         }
 
-        String role = "ADMIN".equals(invite.getType()) ? "FAMILY_ADMIN" : "MEMBER";
+        Optional<User> personalCodeOwner = userRepository.findByInviteCode(trimmedCode);
+
+        if (personalCodeOwner.isPresent()) {
+            // Path A: personal invite code -> Family Admin, no group involved
+            User user = new User();
+            user.setFullName(fullName.trim());
+            user.setUsername(username.trim());
+            user.setEmail(email.trim().toLowerCase());
+            user.setPassword(passwordEncoder.encode(password));
+            user.setVerified(true);
+            user.setRole("FAMILY_ADMIN");
+            user.setStatus("ACTIVE");
+            user.setHasSeenTour(false);
+            user.setCreatedAt(LocalDateTime.now());
+            user.setInviteCode(generateUniqueInviteCode());
+            userRepository.save(user);
+
+            // Rotate the code owner's personal invite code so it can't be reused/redistributed.
+            User owner = personalCodeOwner.get();
+            owner.setInviteCode(generateUniqueInviteCode());
+            userRepository.save(owner);
+
+            emailService.sendWelcomeEmail(user.getEmail(), user.getFullName());
+            return;
+        }
+
+        // Path B: group invite token -> Member, auto-joined to that group
+        Invite invite = inviteService.validateToken(trimmedCode);
+        if (!invite.getEmail().equalsIgnoreCase(email.trim())) {
+            throw new RuntimeException(
+                    "This invite was sent to " + invite.getEmail() + ". Use that email to register.");
+        }
 
         User user = new User();
         user.setFullName(fullName.trim());
@@ -65,13 +99,14 @@ public class AuthService {
         user.setEmail(email.trim().toLowerCase());
         user.setPassword(passwordEncoder.encode(password));
         user.setVerified(true);
-        user.setRole(role);
+        user.setRole("MEMBER");
         user.setStatus("ACTIVE");
         user.setHasSeenTour(false);
         user.setCreatedAt(LocalDateTime.now());
+        user.setInviteCode(generateUniqueInviteCode());
         userRepository.save(user);
 
-        if ("MEMBER".equals(invite.getType()) && invite.getGroupId() != null) {
+        if (invite.getGroupId() != null) {
             groupRepository.findById(invite.getGroupId()).ifPresent(group -> {
                 if (!group.getMemberIds().contains(user.getId())) {
                     group.getMemberIds().add(user.getId());
@@ -80,8 +115,16 @@ public class AuthService {
             });
         }
 
-        inviteService.markUsed(inviteToken);
+        inviteService.markUsed(trimmedCode);
         emailService.sendWelcomeEmail(user.getEmail(), user.getFullName());
+    }
+
+    private String generateUniqueInviteCode() {
+        String code;
+        do {
+            code = "QH-" + String.format("%06d", new Random().nextInt(999999));
+        } while (userRepository.existsByInviteCode(code));
+        return code;
     }
 
     public String login(String email, String password) {
@@ -96,6 +139,11 @@ public class AuthService {
         }
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new RuntimeException("Incorrect password. Please try again.");
+        }
+        // Backfill: older accounts created before invite codes existed won't have one yet.
+        if (user.getInviteCode() == null || user.getInviteCode().isBlank()) {
+            user.setInviteCode(generateUniqueInviteCode());
+            userRepository.save(user);
         }
         return jwtUtil.generateToken(user.getId(), user.getEmail());
     }

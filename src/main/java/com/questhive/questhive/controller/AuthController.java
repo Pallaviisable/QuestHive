@@ -32,11 +32,23 @@ public class AuthController {
                     body.get("username"),
                     body.get("email"),
                     body.get("password"),
-                    body.get("inviteToken"),
+                    body.get("code"),
                     body.get("captchaToken")
             );
             return ResponseEntity.ok(Map.of("message",
                     "Account created successfully! You can now login."));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    // ── Get current user (fresh data, e.g. after invite code rotates) ────────
+    @GetMapping("/me")
+    public ResponseEntity<?> getMe(@RequestHeader("Authorization") String auth) {
+        try {
+            User user = userRepository.findById(extractUserId(auth))
+                    .orElseThrow(() -> new RuntimeException("User not found."));
+            return ResponseEntity.ok(Map.of("user", user));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
