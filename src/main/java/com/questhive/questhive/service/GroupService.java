@@ -74,7 +74,7 @@ public class GroupService {
         }
 
         Invite invite = inviteService.createMemberInvite(targetEmail, groupId, adminId);
-        emailService.sendGroupInvite(targetEmail, group.getName(), invite.getToken());
+        emailService.sendGroupInvite(targetEmail, group.getName(), group.getInviteCode());
         logActivity(groupId, "INVITE_SENT", null, null, "Invite sent to " + targetEmail, 0);
         updateLastActivity(groupId);
     }
