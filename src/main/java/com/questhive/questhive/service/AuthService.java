@@ -36,9 +36,8 @@ public class AuthService {
     @Value("${hcaptcha.verify.url:https://hcaptcha.com/siteverify}")
     private String hcaptchaVerifyUrl;
 
-    // New signup flow: a single `code` field can be either
-    //   (a) an existing user's personal invite code -> new user becomes FAMILY_ADMIN, no group join
-    //   (b) a group invite token (existing Invite mechanism) -> new user becomes MEMBER, auto-joined to that group
+    // Signup requires a valid Invite token: either a MEMBER invite (from a family admin,
+    // auto-joins the target group) or an ADMIN invite (from super-admin approval, no group).
     public void register(String fullName, String username, String email,
                          String password, String code, String captchaToken) {
         verifyCaptcha(captchaToken);
@@ -60,33 +59,7 @@ public class AuthService {
             throw new RuntimeException("Full name must be at least 3 characters.");
         }
 
-        Optional<User> personalCodeOwner = userRepository.findByInviteCode(trimmedCode);
-
-        if (personalCodeOwner.isPresent()) {
-            // Path A: personal invite code -> Family Admin, no group involved
-            User user = new User();
-            user.setFullName(fullName.trim());
-            user.setUsername(username.trim());
-            user.setEmail(email.trim().toLowerCase());
-            user.setPassword(passwordEncoder.encode(password));
-            user.setVerified(true);
-            user.setRole("FAMILY_ADMIN");
-            user.setStatus("ACTIVE");
-            user.setHasSeenTour(false);
-            user.setCreatedAt(LocalDateTime.now());
-            user.setInviteCode(generateUniqueInviteCode());
-            userRepository.save(user);
-
-            // Rotate the code owner's personal invite code so it can't be reused/redistributed.
-            User owner = personalCodeOwner.get();
-            owner.setInviteCode(generateUniqueInviteCode());
-            userRepository.save(owner);
-
-            emailService.sendWelcomeEmail(user.getEmail(), user.getFullName());
-            return;
-        }
-
-        // Path B: group invite token -> Member, auto-joined to that group
+        // Invite token -> either MEMBER (group invite) or FAMILY_ADMIN (super-admin-approved admin invite)
         Invite invite = inviteService.validateToken(trimmedCode);
         if (!invite.getEmail().equalsIgnoreCase(email.trim())) {
             throw new RuntimeException(
@@ -99,11 +72,10 @@ public class AuthService {
         user.setEmail(email.trim().toLowerCase());
         user.setPassword(passwordEncoder.encode(password));
         user.setVerified(true);
-        user.setRole("MEMBER");
+        user.setRole("ADMIN".equals(invite.getType()) ? "FAMILY_ADMIN" : "MEMBER");
         user.setStatus("ACTIVE");
         user.setHasSeenTour(false);
         user.setCreatedAt(LocalDateTime.now());
-        user.setInviteCode(generateUniqueInviteCode());
         userRepository.save(user);
 
         if (invite.getGroupId() != null) {
@@ -119,14 +91,6 @@ public class AuthService {
         emailService.sendWelcomeEmail(user.getEmail(), user.getFullName());
     }
 
-    private String generateUniqueInviteCode() {
-        String code;
-        do {
-            code = "QH-" + String.format("%06d", new Random().nextInt(999999));
-        } while (userRepository.existsByInviteCode(code));
-        return code;
-    }
-
     public String login(String email, String password) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("No account found with this email."));
@@ -139,11 +103,6 @@ public class AuthService {
         }
         if (!passwordEncoder.matches(password, user.getPassword())) {
             throw new RuntimeException("Incorrect password. Please try again.");
-        }
-        // Backfill: older accounts created before invite codes existed won't have one yet.
-        if (user.getInviteCode() == null || user.getInviteCode().isBlank()) {
-            user.setInviteCode(generateUniqueInviteCode());
-            userRepository.save(user);
         }
         return jwtUtil.generateToken(user.getId(), user.getEmail());
     }

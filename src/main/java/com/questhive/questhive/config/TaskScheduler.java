@@ -96,7 +96,7 @@ public class TaskScheduler {
     }
 
     // ── Priority auto-escalation — every 30 minutes ───────────────────────────
-    @Scheduled(fixedRate = 1800000)
+    @Scheduled(fixedRate = 1800000, initialDelay = 480000)
     public void autoEscalatePriorities() {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime mediumCutoff = now.minusHours(24);
