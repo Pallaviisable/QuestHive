@@ -145,6 +145,12 @@ public class TaskScheduler {
         );
     }
 
+    // ── Streak risk check / auto-freeze — every day at 8 PM ─────────────────────
+    @Scheduled(cron = "0 0 20 * * *")
+    public void checkStreakRisks() {
+        userRepository.findAll().forEach(rewardService::checkStreakRisk);
+    }
+
     // ── Group inactivity — every day at midnight ───────────────────────────────
     // New Feature #2: warn at 15 days, delete at 30 days
     @Scheduled(cron = "0 0 0 * * *")

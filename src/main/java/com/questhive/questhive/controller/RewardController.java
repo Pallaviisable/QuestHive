@@ -95,4 +95,40 @@ public class RewardController {
         rewardService.deactivateRedeemOption(optionId);
         return ResponseEntity.ok(Map.of("message", "Redeem option deactivated."));
     }
+
+    // ── Streak: freeze / restore / planned pause ────────────────────────────
+    @GetMapping("/streak")
+    public ResponseEntity<?> getStreakStatus(@RequestHeader("Authorization") String auth) {
+        try {
+            String userId = extractUserId(auth);
+            return ResponseEntity.ok(rewardService.getStreakStatus(userId));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/streak/restore")
+    public ResponseEntity<?> restoreStreak(@RequestHeader("Authorization") String auth) {
+        try {
+            String userId = extractUserId(auth);
+            rewardService.restoreStreak(userId);
+            return ResponseEntity.ok(Map.of("message", "Streak restored."));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/streak/pause")
+    public ResponseEntity<?> planStreakPause(
+            @RequestHeader("Authorization") String auth,
+            @RequestBody Map<String, Integer> body) {
+        try {
+            String userId = extractUserId(auth);
+            int days = body.getOrDefault("days", 0);
+            rewardService.planStreakPause(userId, days);
+            return ResponseEntity.ok(Map.of("message", "Planned pause set."));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
 }

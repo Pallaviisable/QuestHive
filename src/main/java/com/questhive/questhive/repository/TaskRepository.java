@@ -15,4 +15,5 @@ public interface TaskRepository extends MongoRepository<Task, String>
     List<Task> findByAssignedToIdAndStatus(String userId, Task.Status status);
     List<Task> findByAssignedByIdAndGroupId(String assignedById, String groupId);
     List<Task> findByAssignedToIdIsNullAndGroupIdIsNotNullAndCreatedAtBefore(LocalDateTime cutoff);
+    List<Task> findByGroupIdAndAssignedToIdIsNull(String groupId);
 }

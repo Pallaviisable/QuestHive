@@ -16,7 +16,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,7 +39,8 @@ public class TaskService {
 
     public Task createGroupTask(String assignedById, String assignedToId, String groupId,
                                 String title, String description, Priority priority,
-                                Category category, LocalDateTime deadline, Integer bonusCoins) {
+                                Category category, LocalDateTime deadline, Integer bonusCoins,
+                                Boolean requiresPhotoProof) {
 
         groupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("Group not found."));
@@ -56,6 +63,7 @@ public class TaskService {
         task.setDeadline(deadline);
         task.setStatus(Status.PENDING);
         task.setPersonal(false);
+        task.setRequiresPhotoProof(requiresPhotoProof != null && requiresPhotoProof);
         int totalCoins = baseCoins(priority) + (bonusCoins != null ? bonusCoins : 0);
         task.setCoinsReward(totalCoins);
         if (bonusCoins != null && bonusCoins >= 50) {
@@ -112,43 +120,132 @@ public class TaskService {
             throw new RuntimeException("You can only update status of tasks assigned to you.");
         }
 
+        if (newStatus == Status.COMPLETED && task.isRequiresPhotoProof()) {
+            throw new RuntimeException("This task requires photo proof. Please submit proof to complete it.");
+        }
+
         task.setStatus(newStatus);
 
         if (newStatus == Status.COMPLETED) {
-            task.setCompletedAt(LocalDateTime.now());
-            if (task.getGroupId() != null) {
-                rewardService.handleTaskCompletion(userId, task);
-                int xpAmount = switch (task.getPriority()) {
-                    case HIGH   -> 50;
-                    case MEDIUM -> 25;
-                    default     -> 10;
-                };
-                xpService.awardXp(userId, task.getGroupId(), xpAmount, "Completed task: " + task.getTitle());
-                userRepository.findById(userId).ifPresent(user -> {
-                    logActivity(task.getGroupId(), "TASK_COMPLETED", user.getFullName(), null, task.getTitle(), task.getCoinsReward());
-                    // Check pledge - fulfilled if completed on or before deadline
-                    if (task.getPledgeMessage() != null && !task.getPledgeMessage().isEmpty()) {
-                        boolean onTime = task.getDeadline() == null || !LocalDateTime.now().isAfter(task.getDeadline());
-                        String pledgeType = onTime ? "PLEDGE_FULFILLED" : "PLEDGE_MISSED";
-                        String pledgeDetail = onTime
-                            ? "fulfilled pledge on task: " + task.getTitle()
-                            : "missed pledge on task: " + task.getTitle();
-                        logActivity(task.getGroupId(), pledgeType, user.getFullName(), null, pledgeDetail, 0);
-                    }
-                    // Notify all group members
-                    groupRepository.findById(task.getGroupId()).ifPresent(group ->
-                        group.getMemberIds().stream()
-                            .filter(mid -> !mid.equals(userId))
-                            .forEach(mid -> notificationService.sendNotification(mid,
-                                "✅ Task Completed",
-                                user.getFullName() + " completed: " + task.getTitle(),
-                                "TASK_COMPLETED", task.getGroupId(), task.getId()))
-                    );
-                });
-            }
+            return completeTask(userId, task);
         }
 
         return taskRepository.save(task);
+    }
+
+    // Shared completion logic — used by direct completion (no proof required)
+    // and by approveTask() (proof was required and got approved)
+    private Task completeTask(String userId, Task task) {
+        task.setStatus(Status.COMPLETED);
+        task.setCompletedAt(LocalDateTime.now());
+        if (task.getGroupId() != null) {
+            rewardService.handleTaskCompletion(userId, task);
+            int xpAmount = switch (task.getPriority()) {
+                case HIGH   -> 50;
+                case MEDIUM -> 25;
+                default     -> 10;
+            };
+            xpService.awardXp(userId, task.getGroupId(), xpAmount, "Completed task: " + task.getTitle());
+            userRepository.findById(userId).ifPresent(user -> {
+                logActivity(task.getGroupId(), "TASK_COMPLETED", user.getFullName(), null, task.getTitle(), task.getCoinsReward());
+                // Check pledge - fulfilled if completed on or before deadline
+                if (task.getPledgeMessage() != null && !task.getPledgeMessage().isEmpty()) {
+                    boolean onTime = task.getDeadline() == null || !LocalDateTime.now().isAfter(task.getDeadline());
+                    String pledgeType = onTime ? "PLEDGE_FULFILLED" : "PLEDGE_MISSED";
+                    String pledgeDetail = onTime
+                        ? "fulfilled pledge on task: " + task.getTitle()
+                        : "missed pledge on task: " + task.getTitle();
+                    logActivity(task.getGroupId(), pledgeType, user.getFullName(), null, pledgeDetail, 0);
+                }
+                // Notify all group members
+                groupRepository.findById(task.getGroupId()).ifPresent(group ->
+                    group.getMemberIds().stream()
+                        .filter(mid -> !mid.equals(userId))
+                        .forEach(mid -> notificationService.sendNotification(mid,
+                            "✅ Task Completed",
+                            user.getFullName() + " completed: " + task.getTitle(),
+                            "TASK_COMPLETED", task.getGroupId(), task.getId()))
+                );
+            });
+        }
+        return taskRepository.save(task);
+    }
+
+    public Task submitProof(String userId, String taskId, String photoBase64) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found."));
+        if (!userId.equals(task.getAssignedToId())) {
+            throw new RuntimeException("You can only submit proof for tasks assigned to you.");
+        }
+        if (!task.isRequiresPhotoProof()) {
+            throw new RuntimeException("This task does not require photo proof.");
+        }
+        if (task.getStatus() == Status.COMPLETED) {
+            throw new RuntimeException("This task is already completed.");
+        }
+        if (photoBase64 == null || photoBase64.isBlank()) {
+            throw new RuntimeException("A photo is required to submit proof.");
+        }
+        task.setProofPhotoBase64(photoBase64);
+        task.setStatus(Status.PENDING_REVIEW);
+        Task saved = taskRepository.save(task);
+        userRepository.findById(userId).ifPresent(user ->
+            notificationService.sendNotification(task.getAssignedById(), "📸 Proof Submitted",
+                user.getFullName() + " submitted proof for: " + task.getTitle(),
+                "PROOF_SUBMITTED", task.getGroupId(), taskId));
+        return saved;
+    }
+
+    public Task approveTask(String requesterId, String taskId) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found."));
+        if (task.getStatus() != Status.PENDING_REVIEW) {
+            throw new RuntimeException("This task is not pending review.");
+        }
+        boolean isGroupAdmin = false;
+        if (task.getGroupId() != null) {
+            Group group = groupRepository.findById(task.getGroupId()).orElse(null);
+            if (group != null) isGroupAdmin = group.getAdminId().equals(requesterId);
+        }
+        if (!task.getAssignedById().equals(requesterId) && !isGroupAdmin) {
+            throw new RuntimeException("Only the task assigner or group admin can approve this task.");
+        }
+        task.setReviewedByUserId(requesterId);
+        task.setReviewedAt(LocalDateTime.now());
+        Task completed = completeTask(task.getAssignedToId(), task);
+        userRepository.findById(task.getAssignedToId()).ifPresent(assignee ->
+            notificationService.sendNotification(assignee.getId(), "✅ Proof Approved!",
+                "Your proof for \"" + task.getTitle() + "\" was approved. Rewards granted!",
+                "PROOF_APPROVED", task.getGroupId(), taskId));
+        return completed;
+    }
+
+    public Task rejectTask(String requesterId, String taskId, String reason) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found."));
+        if (task.getStatus() != Status.PENDING_REVIEW) {
+            throw new RuntimeException("This task is not pending review.");
+        }
+        boolean isGroupAdmin = false;
+        if (task.getGroupId() != null) {
+            Group group = groupRepository.findById(task.getGroupId()).orElse(null);
+            if (group != null) isGroupAdmin = group.getAdminId().equals(requesterId);
+        }
+        if (!task.getAssignedById().equals(requesterId) && !isGroupAdmin) {
+            throw new RuntimeException("Only the task assigner or group admin can reject this task.");
+        }
+        task.setStatus(Status.IN_PROGRESS);
+        task.setProofPhotoBase64(null);
+        task.setReviewedByUserId(requesterId);
+        task.setReviewedAt(LocalDateTime.now());
+        task.setRejectionReason(reason);
+        Task saved = taskRepository.save(task);
+        userRepository.findById(task.getAssignedToId()).ifPresent(assignee ->
+            notificationService.sendNotification(assignee.getId(), "❌ Proof Rejected",
+                "Your proof for \"" + task.getTitle() + "\" was rejected."
+                    + (reason != null && !reason.isBlank() ? " Reason: " + reason : ""),
+                "PROOF_REJECTED", task.getGroupId(), taskId));
+        return saved;
     }
 
     public Task claimTask(String userId, String taskId) {
@@ -447,6 +544,111 @@ public class TaskService {
             });
         }
         return saved;
+    }
+
+    // ── TASK SORTING (Feature 5) ────────────────────────────────────────────
+    // scope: ASSIGNED_TO_ME | MY_NEST | OPEN (OPEN requires groupId)
+    public Map<String, List<Task>> getTaskBuckets(String userId, String groupId, String scope) {
+        List<Task> tasks;
+        switch (scope) {
+            case "ASSIGNED_TO_ME":
+                tasks = taskRepository.findByAssignedToId(userId).stream()
+                        .filter(t -> !t.isPersonal())
+                        .collect(Collectors.toList());
+                break;
+            case "MY_NEST":
+                tasks = taskRepository.findByAssignedToIdAndIsPersonal(userId, true);
+                break;
+            case "OPEN":
+                if (groupId == null || groupId.isBlank()) {
+                    throw new RuntimeException("groupId is required for the OPEN scope.");
+                }
+                tasks = taskRepository.findByGroupIdAndAssignedToIdIsNull(groupId);
+                break;
+            default:
+                throw new RuntimeException("Unknown scope: " + scope);
+        }
+
+        tasks = tasks.stream()
+                .filter(t -> t.getStatus() == Status.PENDING
+                        || t.getStatus() == Status.IN_PROGRESS
+                        || t.getStatus() == Status.PENDING_REVIEW)
+                .collect(Collectors.toList());
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime todayEnd = now.toLocalDate().atTime(23, 59, 59);
+        LocalDateTime weekEnd = now.toLocalDate().plusDays(7).atStartOfDay();
+
+        Map<String, List<Task>> buckets = new LinkedHashMap<>();
+        buckets.put("overdue", new ArrayList<>());
+        buckets.put("today", new ArrayList<>());
+        buckets.put("thisWeek", new ArrayList<>());
+        buckets.put("later", new ArrayList<>());
+
+        for (Task t : tasks) {
+            LocalDateTime deadline = t.getDeadline();
+            if (deadline == null) {
+                buckets.get("later").add(t);
+            } else if (deadline.isBefore(now)) {
+                buckets.get("overdue").add(t);
+            } else if (!deadline.isAfter(todayEnd)) {
+                buckets.get("today").add(t);
+            } else if (deadline.isBefore(weekEnd)) {
+                buckets.get("thisWeek").add(t);
+            } else {
+                buckets.get("later").add(t);
+            }
+        }
+
+        Comparator<Task> byPriorityThenDeadline = Comparator
+                .comparingInt((Task t) -> priorityRank(t.getPriority())).reversed()
+                .thenComparing(t -> t.getDeadline() != null ? t.getDeadline() : LocalDateTime.MAX);
+
+        buckets.values().forEach(list -> list.sort(byPriorityThenDeadline));
+
+        return buckets;
+    }
+
+    // "Up Next" — the single most urgent task assigned to this user
+    public Task getUpNextTask(String userId) {
+        List<Task> mine = taskRepository.findByAssignedToId(userId).stream()
+                .filter(t -> t.getStatus() == Status.PENDING || t.getStatus() == Status.IN_PROGRESS)
+                .collect(Collectors.toList());
+        if (mine.isEmpty()) return null;
+
+        LocalDateTime now = LocalDateTime.now();
+
+        Optional<Task> overdueHigh = mine.stream()
+                .filter(t -> t.getDeadline() != null && t.getDeadline().isBefore(now) && t.getPriority() == Priority.HIGH)
+                .min(Comparator.comparing(Task::getDeadline));
+        if (overdueHigh.isPresent()) return overdueHigh.get();
+
+        Optional<Task> anyOverdue = mine.stream()
+                .filter(t -> t.getDeadline() != null && t.getDeadline().isBefore(now))
+                .min(Comparator.comparing(Task::getDeadline));
+        if (anyOverdue.isPresent()) return anyOverdue.get();
+
+        Optional<Task> upcomingHigh = mine.stream()
+                .filter(t -> t.getPriority() == Priority.HIGH && t.getDeadline() != null)
+                .min(Comparator.comparing(Task::getDeadline));
+        if (upcomingHigh.isPresent()) return upcomingHigh.get();
+
+        Optional<Task> soonest = mine.stream()
+                .filter(t -> t.getDeadline() != null)
+                .min(Comparator.comparing(Task::getDeadline));
+        if (soonest.isPresent()) return soonest.get();
+
+        return mine.stream()
+                .max(Comparator.comparingInt(t -> priorityRank(t.getPriority())))
+                .orElse(null);
+    }
+
+    private int priorityRank(Priority priority) {
+        return switch (priority) {
+            case HIGH -> 3;
+            case MEDIUM -> 2;
+            case LOW -> 1;
+        };
     }
 
     private int baseCoins(Priority priority) {

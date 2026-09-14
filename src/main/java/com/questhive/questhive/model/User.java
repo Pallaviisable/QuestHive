@@ -5,6 +5,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.index.Indexed;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Data
 @Document(collection = "users")
@@ -25,6 +26,13 @@ public class User {
     private String titleBadge = "Hive Newcomer";
     private int coins;
     private int streak;
+
+    // Streak system: freeze/restore/planned-pause
+    private int freezeTokens = 0;
+    private LocalDate lastStreakCreditDate;
+    private int lastBrokenStreak = 0;
+    private LocalDate streakBrokenDate;
+    private LocalDateTime plannedPauseUntil;
     private boolean isVerified = false;
     private boolean usernameChanged = false;
     private boolean reminderSent = false;

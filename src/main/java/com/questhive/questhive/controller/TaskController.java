@@ -63,7 +63,8 @@ public class TaskController {
                     Priority.valueOf((String) body.get("priority")),
                     Category.valueOf((String) body.get("category")),
                     parseDeadline(body.get("deadline")),
-                    parseBonusCoins(body.get("bonusCoins"))
+                    parseBonusCoins(body.get("bonusCoins")),
+                    (Boolean) body.get("requiresPhotoProof")
             ));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -193,6 +194,26 @@ public class TaskController {
         return ResponseEntity.ok(taskService.getGroupTasksByStatus(groupId, Status.valueOf(status)));
     }
 
+    // ── TASK SORTING ──────────────────────────────────────────────────────
+    @GetMapping("/buckets")
+    public ResponseEntity<?> getTaskBuckets(
+            @RequestHeader("Authorization") String auth,
+            @RequestParam String scope,
+            @RequestParam(required = false) String groupId) {
+        try {
+            String userId = extractUserId(auth);
+            return ResponseEntity.ok(taskService.getTaskBuckets(userId, groupId, scope));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/up-next")
+    public ResponseEntity<?> getUpNext(@RequestHeader("Authorization") String auth) {
+        String userId = extractUserId(auth);
+        return ResponseEntity.ok(taskService.getUpNextTask(userId));
+    }
+
     @GetMapping("/group/{groupId}/assigned-by-me")
     public ResponseEntity<List<Task>> tasksAssignedByMe(
             @RequestHeader("Authorization") String auth,
@@ -280,5 +301,45 @@ public class TaskController {
         String message = body.get("message");
         Task task = taskService.addPledge(taskId, userId, message);
         return ResponseEntity.ok(task);
+    }
+
+    // ── CONFIRMATION / PROOF-OF-COMPLETION ──────────────────────────────────
+    @PostMapping("/{taskId}/submit-proof")
+    public ResponseEntity<?> submitProof(
+            @RequestHeader("Authorization") String auth,
+            @PathVariable String taskId,
+            @RequestBody Map<String, String> body) {
+        try {
+            String userId = extractUserId(auth);
+            return ResponseEntity.ok(taskService.submitProof(userId, taskId, body.get("photo")));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{taskId}/approve")
+    public ResponseEntity<?> approveTask(
+            @RequestHeader("Authorization") String auth,
+            @PathVariable String taskId) {
+        try {
+            String userId = extractUserId(auth);
+            return ResponseEntity.ok(taskService.approveTask(userId, taskId));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{taskId}/reject")
+    public ResponseEntity<?> rejectTask(
+            @RequestHeader("Authorization") String auth,
+            @PathVariable String taskId,
+            @RequestBody(required = false) Map<String, String> body) {
+        try {
+            String userId = extractUserId(auth);
+            String reason = body != null ? body.get("reason") : null;
+            return ResponseEntity.ok(taskService.rejectTask(userId, taskId, reason));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 }

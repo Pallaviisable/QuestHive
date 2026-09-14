@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.time.DayOfWeek;
 import java.time.temporal.TemporalAdjusters;
 import java.util.*;
@@ -27,6 +28,7 @@ public class RewardService {
     private final RedeemOptionRepository redeemOptionRepository;
     private final UserRepository userRepository;
     private final GroupActivityRepository groupActivityRepository; // ← NEW
+    private final NotificationService notificationService;
 
     public void handleTaskCompletion(String userId, Task task) {
         int coinsEarned = task.getCoinsReward();
@@ -40,15 +42,36 @@ public class RewardService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found."));
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime lastCompleted = user.getLastTaskCompletedAt();
-        boolean completedYesterday = lastCompleted != null &&
-                lastCompleted.toLocalDate().equals(now.toLocalDate().minusDays(1));
-        boolean completedToday = lastCompleted != null &&
-                lastCompleted.toLocalDate().equals(now.toLocalDate());
-        if (completedToday) return;
-        if (completedYesterday) user.setStreak(user.getStreak() + 1);
-        else user.setStreak(1);
+        LocalDate today = now.toLocalDate();
+
+        // Planned pause: streak neither breaks nor grows while paused
+        if (user.getPlannedPauseUntil() != null && now.isBefore(user.getPlannedPauseUntil())) {
+            user.setLastTaskCompletedAt(now);
+            userRepository.save(user);
+            return;
+        }
+
+        LocalDate lastCredit = user.getLastStreakCreditDate();
+        if (lastCredit != null && lastCredit.equals(today)) {
+            // Already credited today — nothing to do
+            user.setLastTaskCompletedAt(now);
+            userRepository.save(user);
+            return;
+        }
+
+        if (lastCredit != null && lastCredit.equals(today.minusDays(1))) {
+            user.setStreak(user.getStreak() + 1);
+        } else {
+            // Streak broke (or this is the first-ever completion)
+            if (user.getStreak() > 0) {
+                user.setLastBrokenStreak(user.getStreak());
+                user.setStreakBrokenDate(today);
+            }
+            user.setStreak(1);
+        }
+        user.setLastStreakCreditDate(today);
         user.setLastTaskCompletedAt(now);
+
         if (user.getStreak() % 3 == 0) {
             int streakBonus = 5;
             saveReward(userId, task.getGroupId(), task.getId(), streakBonus,
@@ -56,6 +79,79 @@ public class RewardService {
             addCoinsToUser(userId, streakBonus);
         }
         userRepository.save(user);
+    }
+
+    private static final int STREAK_RESTORE_COST = 30;
+
+    public Map<String, Object> getStreakStatus(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found."));
+        LocalDate today = LocalDate.now();
+        boolean canRestore = user.getLastBrokenStreak() > 0
+                && user.getStreakBrokenDate() != null
+                && user.getStreakBrokenDate().equals(today);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("streak", user.getStreak());
+        result.put("freezeTokens", user.getFreezeTokens());
+        result.put("plannedPauseUntil", user.getPlannedPauseUntil());
+        result.put("canRestore", canRestore);
+        result.put("lastBrokenStreak", user.getLastBrokenStreak());
+        result.put("restoreCost", STREAK_RESTORE_COST);
+        return result;
+    }
+
+    public void restoreStreak(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found."));
+        LocalDate today = LocalDate.now();
+        if (user.getLastBrokenStreak() <= 0 || user.getStreakBrokenDate() == null
+                || !user.getStreakBrokenDate().equals(today)) {
+            throw new RuntimeException("No broken streak to restore. You can only restore on the day your streak broke.");
+        }
+        if (user.getCoins() < STREAK_RESTORE_COST) {
+            throw new RuntimeException("Not enough coins to restore your streak (" + STREAK_RESTORE_COST + " required).");
+        }
+        user.setCoins(user.getCoins() - STREAK_RESTORE_COST);
+        user.setStreak(user.getLastBrokenStreak());
+        user.setLastStreakCreditDate(today);
+        user.setLastBrokenStreak(0);
+        user.setStreakBrokenDate(null);
+        userRepository.save(user);
+    }
+
+    public void planStreakPause(String userId, int days) {
+        if (days < 1 || days > 7) {
+            throw new RuntimeException("Planned pause must be between 1 and 7 days.");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found."));
+        if (user.getPlannedPauseUntil() != null && LocalDateTime.now().isBefore(user.getPlannedPauseUntil())) {
+            throw new RuntimeException("You already have a planned pause active.");
+        }
+        user.setPlannedPauseUntil(LocalDateTime.now().plusDays(days));
+        userRepository.save(user);
+    }
+
+    // Called by the nightly scheduler — auto-consumes a freeze token or sends a risk notification
+    public void checkStreakRisk(User user) {
+        if (user.getStreak() <= 0) return;
+        LocalDateTime now = LocalDateTime.now();
+        if (user.getPlannedPauseUntil() != null && now.isBefore(user.getPlannedPauseUntil())) return;
+        LocalDate today = now.toLocalDate();
+        if (user.getLastStreakCreditDate() != null && user.getLastStreakCreditDate().equals(today)) return;
+
+        if (user.getFreezeTokens() > 0) {
+            user.setFreezeTokens(user.getFreezeTokens() - 1);
+            user.setLastStreakCreditDate(today);
+            userRepository.save(user);
+            notificationService.sendNotification(user.getId(), "🧊 Streak Protected!",
+                    "A freeze token was used to protect your " + user.getStreak() + "-day streak.",
+                    "STREAK_FROZEN", null, null);
+        } else {
+            notificationService.sendNotification(user.getId(), "⚠️ Streak at Risk!",
+                    "Complete a task before midnight to keep your " + user.getStreak() + "-day streak alive.",
+                    "STREAK_RISK", null, null);
+        }
     }
 
     public Map<String, Integer> getWeeklyLeaderboard(String groupId) {

@@ -3,14 +3,15 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getMyTasks, getMyGroups, getMyCoins, getMyXP, getGroupHealth } from '@/lib/api';
 import OnboardingTour from '@/components/OnboardingTour';
+import StreakWidget from '@/components/StreakWidget';
 
 const FRAME_CONFIG = {
-  LEGENDARY: { color: '#f5c518', label: 'Legendary' },
-  CHAMPION:  { color: '#a855f7', label: 'Champion'  },
-  ELITE:     { color: '#3b82f6', label: 'Elite'     },
-  VETERAN:   { color: '#22c55e', label: 'Veteran'   },
-  DEDICATED: { color: '#f97316', label: 'Dedicated' },
-  RISING:    { color: '#6b7280', label: 'Rising'    },
+  LEGENDARY: { color: '#f5c518', label: 'Backbone of the Family' },
+  CHAMPION:  { color: '#a855f7', label: 'Pillar of the Family'   },
+  ELITE:     { color: '#3b82f6', label: 'Trusted'                },
+  VETERAN:   { color: '#22c55e', label: 'Reliable'               },
+  DEDICATED: { color: '#f97316', label: 'Dependable'             },
+  RISING:    { color: '#6b7280', label: 'Getting Started'        },
 };
 
 function GroupHealthMini({ group }) {
@@ -175,6 +176,11 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+
+        {/* ── Streak ── */}
+        <div style={{ marginBottom: '20px', animation: 'shimmerIn 0.5s ease' }}>
+          <StreakWidget />
+        </div>
 
         {/* ── Stats Grid ── */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px', marginBottom: '24px' }}>

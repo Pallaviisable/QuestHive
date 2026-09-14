@@ -26,6 +26,13 @@ public class Task {
     private LocalDateTime createdAt;
     private boolean isPersonal;
     private int coinsReward;
+
+    // Confirmation / proof-of-completion
+    private boolean requiresPhotoProof = false;
+    private String proofPhotoBase64;
+    private String reviewedByUserId;
+    private LocalDateTime reviewedAt;
+    private String rejectionReason;
     private LocalDateTime openTaskNotifiedAt;
     private boolean openTaskBonus = false;
 
@@ -48,7 +55,7 @@ public class Task {
     private String pledgedByUserId;
 
     public enum Priority { LOW, MEDIUM, HIGH }
-    public enum Status { PENDING, IN_PROGRESS, COMPLETED, DENIED }
+    public enum Status { PENDING, IN_PROGRESS, PENDING_REVIEW, COMPLETED, DENIED }
     public enum Category { GROCERIES, HOME, SCHOOL, PERSONAL, WORK, OTHER }
 
     @Data

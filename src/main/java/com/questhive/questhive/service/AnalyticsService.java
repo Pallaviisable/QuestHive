@@ -23,6 +23,7 @@ public class AnalyticsService {
     private final TaskRepository taskRepository;
     private final GroupRepository groupRepository;
     private final XpRepository xpRepository;
+    private final XpService xpService;
 
     public Map<String, Object> getPlatformAnalytics() {
         List<User>  allUsers  = userRepository.findAll();
@@ -193,7 +194,6 @@ public class AnalyticsService {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new RuntimeException("Group not found"));
         List<String> memberIds = group.getMemberIds();
-        XpService xpCalc = new XpService(xpRepository, userRepository);
 
         return memberIds.stream().map(memberId -> {
             User user = userRepository.findById(memberId).orElse(null);
@@ -211,13 +211,13 @@ public class AnalyticsService {
 
             int totalXp = xpRepository.findByUserId(memberId).stream()
                     .mapToInt(XpRecord::getXpAmount).sum();
-            int level = xpCalc.calculateLevel(totalXp);
+            int level = xpService.calculateLevel(totalXp);
 
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("userId",                memberId);
             m.put("fullName",              user.getFullName() != null ? user.getFullName() : user.getUsername());
             m.put("avatarColor",           user.getAvatarColor());
-            m.put("titleBadge",            xpCalc.getTitle(level));
+            m.put("titleBadge",            xpService.getTitle(level));
             m.put("level",                 level);
             m.put("totalXp",               totalXp);
             m.put("coins",                 user.getCoins());

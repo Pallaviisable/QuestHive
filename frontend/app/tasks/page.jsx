@@ -1,14 +1,11 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { getMyTasks, getMyPersonalTasks, createPersonalTask, updateTaskStatus, deleteTask } from '@/lib/api';
+import TaskCard from '@/components/TaskCard';
 
 const STATUSES   = ['ALL','PENDING','IN_PROGRESS','COMPLETED'];
 const PRIORITIES = ['ALL','LOW','MEDIUM','HIGH'];
 const CATEGORIES = ['ALL','GROCERIES','HOME','SCHOOL','PERSONAL','WORK','OTHER'];
-
-const PRIORITY_COLOR = { LOW: '#22c55e', MEDIUM: '#f59e0b', HIGH: '#ef4444' };
-const STATUS_COLOR   = { PENDING: '#6b7280', IN_PROGRESS: '#3b82f6', COMPLETED: '#22c55e' };
-const STATUS_BG      = { PENDING: 'rgba(107,114,128,0.12)', IN_PROGRESS: 'rgba(59,130,246,0.12)', COMPLETED: 'rgba(34,197,94,0.12)' };
 
 export default function TasksPage() {
   const [tasks,          setTasks]          = useState([]);
@@ -71,8 +68,6 @@ export default function TasksPage() {
       <style>{`
         @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
         @keyframes spin { to{transform:rotate(360deg)} }
-        .task-row { transition: background 0.15s; }
-        .task-row:hover { background: rgba(255,255,255,0.025) !important; }
       `}</style>
 
       <div style={{ animation: 'fadeUp 0.4s cubic-bezier(0.16,1,0.3,1)' }}>
@@ -190,88 +185,17 @@ export default function TasksPage() {
             </p>
           </div>
         ) : (
-          <div style={{ background:'var(--bg-card)', borderRadius:'14px', border:'1px solid var(--border)', overflow:'hidden' }}>
-            {/* Table header */}
-            <div style={{
-              display:'grid', gridTemplateColumns:'2fr 100px 130px 110px 130px',
-              padding:'11px 20px', borderBottom:'1px solid var(--border)',
-              fontSize:'10px', fontWeight:700, color:'var(--text-muted)', textTransform:'uppercase', letterSpacing:'0.6px',
-              background:'var(--bg-elevated)',
-            }}>
-              <span>Task</span><span>Priority</span><span>Status</span><span>Category</span><span>Actions</span>
-            </div>
-
-            {filtered.map((task, i) => {
-              const isOverdue = task.status !== 'COMPLETED' && task.deadline && new Date(task.deadline) < new Date();
-              return (
-                <div key={i} className="task-row" style={{
-                  display:'grid', gridTemplateColumns:'2fr 100px 130px 110px 130px',
-                  padding:'13px 20px', borderBottom: i < filtered.length-1 ? '1px solid var(--border)' : 'none',
-                  alignItems:'center',
-                }}>
-                  {/* Title */}
-                  <div>
-                    <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-                      <div style={{ width:'7px', height:'7px', borderRadius:'50%', flexShrink:0, background: isOverdue ? '#ef4444' : STATUS_COLOR[task.status], boxShadow:`0 0 5px ${isOverdue ? '#ef4444' : STATUS_COLOR[task.status]}60` }} />
-                      <span style={{ fontSize:'13px', fontWeight:600, color:'var(--text-primary)' }}>{task.title}</span>
-                      {task.personal && <span style={{ fontSize:'9px', fontWeight:700, color:'#22c55e', background:'rgba(34,197,94,0.1)', border:'1px solid rgba(34,197,94,0.2)', borderRadius:'999px', padding:'1px 6px' }}>NEST</span>}
-                    </div>
-                    {task.deadline && (
-                      <span style={{ fontSize:'11px', color: isOverdue ? '#ef4444' : 'var(--text-muted)', marginTop:'3px', display:'block', paddingLeft:'15px' }}>
-                        {isOverdue ? 'Overdue · ' : ''}{new Date(task.deadline).toLocaleDateString('en-US', { month:'short', day:'numeric' })}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Priority */}
-                  <span style={{
-                    display:'inline-flex', padding:'3px 10px', borderRadius:'999px',
-                    fontSize:'10px', fontWeight:700, width:'fit-content',
-                    background:`${PRIORITY_COLOR[task.priority]}15`,
-                    color: PRIORITY_COLOR[task.priority],
-                    border:`1px solid ${PRIORITY_COLOR[task.priority]}30`,
-                  }}>{task.priority}</span>
-
-                  {/* Status */}
-                  <span style={{
-                    display:'inline-flex', padding:'3px 10px', borderRadius:'999px',
-                    fontSize:'10px', fontWeight:700, width:'fit-content',
-                    background: STATUS_BG[task.status], color: STATUS_COLOR[task.status],
-                    border:`1px solid ${STATUS_COLOR[task.status]}30`,
-                  }}>{task.status.replace('_',' ')}</span>
-
-                  {/* Category */}
-                  <span style={{ fontSize:'12px', color:'var(--text-muted)', fontWeight:500 }}>{task.category}</span>
-
-                  {/* Actions */}
-                  <div style={{ display:'flex', gap:'6px', alignItems:'center' }}>
-                    {task.status === 'PENDING' && (
-                      <button onClick={() => handleStatus(task.id, 'IN_PROGRESS')} style={{
-                        fontSize:'11px', padding:'5px 12px', borderRadius:'7px', fontWeight:600, cursor:'pointer',
-                        background:'rgba(59,130,246,0.1)', border:'1px solid rgba(59,130,246,0.25)', color:'#3b82f6',
-                        transition:'all 0.15s',
-                      }}>Start</button>
-                    )}
-                    {task.status === 'IN_PROGRESS' && (
-                      <button onClick={() => handleStatus(task.id, 'COMPLETED')} style={{
-                        fontSize:'11px', padding:'5px 12px', borderRadius:'7px', fontWeight:700, cursor:'pointer',
-                        background:'rgba(34,197,94,0.1)', border:'1px solid rgba(34,197,94,0.25)', color:'#22c55e',
-                        transition:'all 0.15s',
-                      }}>Done</button>
-                    )}
-                    {(task.personal || task.assignedById === user?.id) && (
-                      <button onClick={() => handleDelete(task.id)} style={{
-                        background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.2)',
-                        color:'#ef4444', borderRadius:'7px', padding:'5px 8px', fontSize:'12px', cursor:'pointer',
-                        display:'flex', alignItems:'center',
-                      }}>
-                        <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+          <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+            {filtered.map((task, i) => (
+              <TaskCard
+                key={i}
+                task={task}
+                user={user}
+                onStart={(taskId) => handleStatus(taskId, 'IN_PROGRESS')}
+                onComplete={(taskId) => handleStatus(taskId, 'COMPLETED')}
+                onDelete={(taskId) => handleDelete(taskId)}
+              />
+            ))}
           </div>
         )}
       </div>
