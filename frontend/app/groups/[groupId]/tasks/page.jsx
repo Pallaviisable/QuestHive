@@ -61,8 +61,10 @@ import {
   addTaskComment, addSubtask, completeSubtask, addCommitmentPledge,
   requestBonusReview, flagBonus, getReviewStatus, getMyXP,
   addTaskAttachment, removeTaskAttachment, getGroupSuggestions,
+  submitProof, approveTask, rejectTask,
 } from '@/lib/api';
 import axios from 'axios';
+import TaskCard from '@/components/TaskCard';
 
 const CATEGORIES = ['GROCERIES', 'HOME', 'SCHOOL', 'PERSONAL', 'WORK', 'OTHER'];
 const priorityColor = { LOW: '#22c55e', MEDIUM: '#f5c518', HIGH: '#ef4444' };
@@ -576,100 +578,24 @@ export default function GroupTasksPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {filtered.map((task, i) => {
-            const isOpenTask = !task.assignedToId;
-            const isCreator = task.assignedById === user?.id;
-            const isAssignedToMe = task.assignedToId === user?.id;
-            const hasSubtasks = (task.subtasks || []).length > 0;
-            const hasComments = (task.comments || []).length > 0;
-            const hasPledge   = !!task.pledgeMessage;
             const { level: assigneeLevel, tier: assigneeTier } = getMemberXpInfo(task.assignedToId);
-
             return (
-              <div key={i} style={{ background: '#1a1a1a', borderRadius: '14px', border: isOpenTask ? '1px solid rgba(245,197,24,0.4)' : '1px solid #2a2a2a', overflow: 'hidden' }}>
-                {isOpenTask && (
-                  <div style={{ background: 'linear-gradient(90deg,rgba(245,197,24,0.2),rgba(245,197,24,0.05))', padding: '5px 18px', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid rgba(245,197,24,0.15)' }}>
-                    <span style={{ fontSize: '12px' }}>🔓</span>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#f5c518' }}>Open Task — Anyone can claim!</span>
-                    {task.openTaskBonus && <span style={{ marginLeft: 'auto', background: 'rgba(34,197,94,0.15)', color: '#22c55e', borderRadius: '999px', padding: '2px 8px', fontSize: '10px', fontWeight: 700 }}>⭐ Bonus</span>}
-                  </div>
-                )}
-
-                <div style={{ padding: '16px 18px', display: 'flex', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1, minWidth: '200px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
-                      <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>{task.title}</h3>
-                      {isAdmin && task.status !== 'COMPLETED' ? (
-                        <select value={task.priority} disabled={priorityUpdating===task.id} onChange={e => handlePriorityChange(task.id, e.target.value)}
-                          style={{ background: `${priorityColor[task.priority]}22`, border: `1px solid ${priorityColor[task.priority]}66`, borderRadius: '999px', color: priorityColor[task.priority], fontSize: '11px', fontWeight: 700, padding: '2px 8px', cursor: 'pointer', outline: 'none' }}>
-                          <option value="LOW">🟢 LOW</option><option value="MEDIUM">🟡 MEDIUM</option><option value="HIGH">🔴 HIGH</option>
-                        </select>
-                      ) : (
-                        <span style={{ padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, background: `${priorityColor[task.priority]}22`, color: priorityColor[task.priority] }}>{task.priority}</span>
-                      )}
-                      <span style={{ padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, background: statusBg[task.status], color: statusColor[task.status] }}>{task.status.replace('_',' ')}</span>
-                    </div>
-
-                    {task.description && <p style={{ color: '#a0a0a0', fontSize: '12px', marginBottom: '8px', lineHeight: 1.4 }}>{task.description}</p>}
-
-                    <div style={{ display: 'flex', gap: '10px', fontSize: '11px', color: '#666', flexWrap: 'wrap', alignItems: 'center' }}>
-                      {/* Assignee with title badge */}
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        👤 {getMemberName(task.assignedToId)}
-                        {task.assignedToId && assigneeTier.frame !== 'none' && (
-                          <span style={{ background: `${assigneeTier.color}22`, color: assigneeTier.color, borderRadius: '999px', padding: '1px 6px', fontSize: '10px', fontWeight: 700 }}>
-                            {assigneeTier.title} Lv.{assigneeLevel}
-                          </span>
-                        )}
-                      </span>
-                      <span>📂 {task.category}</span>
-                      {task.deadline && <span>⏰ {new Date(task.deadline).toLocaleDateString()}</span>}
-                      <span style={{ color: '#f5c518', fontWeight: 700 }}>🪙 {task.coinsReward}</span>
-                    </div>
-
-                    {/* Indicators */}
-                    <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
-                      {hasSubtasks && (
-                        <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '999px', background: 'rgba(59,130,246,0.15)', color: '#3b82f6', fontWeight: 600 }}>
-                          📝 {(task.subtasks||[]).filter(s=>s.completed).length}/{(task.subtasks||[]).length} subtasks
-                        </span>
-                      )}
-                      {hasComments && (
-                        <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '999px', background: 'rgba(34,197,94,0.12)', color: '#22c55e', fontWeight: 600 }}>
-                          💬 {(task.comments||[]).length}
-                        </span>
-                      )}
-                      {hasPledge && (
-                        <span style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '999px', background: 'rgba(168,85,247,0.12)', color: '#a855f7', fontWeight: 600 }}>
-                          🤝 pledged
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div style={{ display: 'flex', gap: '6px', flexShrink: 0, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <button onClick={() => setSelectedTask(task)} style={{ background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.25)', color: '#f5c518', borderRadius: '8px', padding: '6px 10px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>Details</button>
-                    {isOpenTask && !isCreator && (
-                      <button className="btn-primary" style={{ fontSize: '12px', padding: '6px 12px' }} onClick={() => claimTask(task.id).then(fetchData)}>🙋 Claim</button>
-                    )}
-                    {isAssignedToMe && task.status === 'PENDING' && (
-                      <button className="btn-outline" style={{ fontSize: '12px', padding: '6px 12px' }} onClick={() => updateTaskStatus(task.id,'IN_PROGRESS').then(fetchData)}>Start</button>
-                    )}
-                    {isAssignedToMe && task.status === 'IN_PROGRESS' && (
-                      <button className="btn-primary" style={{ fontSize: '12px', padding: '6px 12px' }} onClick={() => updateTaskStatus(task.id,'COMPLETED').then(fetchData)}>Done ✅</button>
-                    )}
-                    {isAssignedToMe && task.status !== 'COMPLETED' && !task.personal && (
-                      <button onClick={() => denyTask(task.id).then(fetchData)} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '8px', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>❌</button>
-                    )}
-                    {(isCreator || isAdmin) && task.status !== 'COMPLETED' && (
-                      <>
-                        <button onClick={() => openEditModal(task)} style={{ background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', color: '#3b82f6', borderRadius: '8px', padding: '6px 8px', fontSize: '13px', cursor: 'pointer' }}>✏️</button>
-                        <button onClick={() => deleteTask(task.id).then(fetchData)} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#ef4444', borderRadius: '8px', padding: '6px 8px', fontSize: '13px', cursor: 'pointer' }}>🗑️</button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <TaskCard
+                key={i}
+                task={task}
+                user={user}
+                isAdmin={isAdmin}
+                assigneeName={getMemberName(task.assignedToId)}
+                assigneeXp={task.assignedToId ? { level: assigneeLevel, tier: assigneeTier } : null}
+                onOpenDetails={(t) => setSelectedTask(t)}
+                onStart={(taskId) => updateTaskStatus(taskId, 'IN_PROGRESS').then(fetchData)}
+                onComplete={(taskId) => updateTaskStatus(taskId, 'COMPLETED').then(fetchData)}
+                onClaim={(taskId) => claimTask(taskId).then(fetchData)}
+                onDeny={(taskId) => denyTask(taskId).then(fetchData)}
+                onEdit={(t) => openEditModal(t)}
+                onDelete={(taskId) => deleteTask(taskId).then(fetchData)}
+                onPriorityChange={(taskId, newPriority) => handlePriorityChange(taskId, newPriority)}
+              />
             );
           })}
         </div>

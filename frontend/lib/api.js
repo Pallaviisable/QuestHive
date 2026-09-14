@@ -142,3 +142,13 @@ export const markNotificationRead = (id) => API.post(`/notifications/${id}/read`
 export const addTaskAttachment   = (taskId, data) => API.post(`/tasks/${taskId}/attachments`, data);
 export const removeTaskAttachment= (taskId, data) => API.delete(`/tasks/${taskId}/attachments`, { data });
 export const getGroupSuggestions = (groupId) => API.get(`/suggestions/group/${groupId}`);
+
+/* STREAK */
+export const getStreakStatus = () => API.get('/rewards/streak');
+export const restoreStreak = () => API.post('/rewards/streak/restore');
+export const planStreakPause = (data) => API.post('/rewards/streak/pause', data);
+
+/* PROOF OF COMPLETION */
+export const submitProof = (taskId, photo)  => API.post(`/tasks/${taskId}/submit-proof`, { photo });
+export const approveTask = (taskId)         => API.post(`/tasks/${taskId}/approve`);
+export const rejectTask  = (taskId, reason) => API.post(`/tasks/${taskId}/reject`, reason ? { reason } : {});
