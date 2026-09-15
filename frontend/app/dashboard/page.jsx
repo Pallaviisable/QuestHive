@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getMyTasks, getMyGroups, getMyCoins, getMyXP, getGroupHealth } from '@/lib/api';
+import { getMyTasks, getMyGroups, getMyCoins, getMyXP, getGroupHealth, getUpNextTask } from '@/lib/api';
 import OnboardingTour from '@/components/OnboardingTour';
 import StreakWidget from '@/components/StreakWidget';
 
@@ -37,6 +37,63 @@ function GroupHealthMini({ group }) {
 const STATUS_COLOR = { PENDING: '#6b7280', IN_PROGRESS: '#3b82f6', COMPLETED: '#22c55e' };
 const PRIORITY_COLOR = { LOW: '#22c55e', MEDIUM: '#f59e0b', HIGH: '#ef4444' };
 
+function formatDeadlineRelative(deadline) {
+  if (!deadline) return null;
+  const d = new Date(deadline);
+  const now = new Date();
+  const diffMs = d - now;
+  const overdue = diffMs < 0;
+  const abs = Math.abs(diffMs);
+  const hours = Math.floor(abs / 3600000);
+  const days = Math.floor(hours / 24);
+  let label;
+  if (days >= 1) label = `${days} day${days > 1 ? 's' : ''}`;
+  else if (hours >= 1) label = `${hours} hour${hours > 1 ? 's' : ''}`;
+  else label = 'less than an hour';
+  return overdue ? `Overdue by ${label}` : `Due in ${label}`;
+}
+
+function UpNextCard({ task }) {
+  if (!task) return null;
+  const overdue = task.deadline && new Date(task.deadline) < new Date();
+  const pColor = PRIORITY_COLOR[task.priority] || 'var(--text-muted)';
+  const relative = formatDeadlineRelative(task.deadline);
+  return (
+    <div
+      className="dash-card"
+      style={{
+        padding: '18px 22px',
+        marginBottom: '20px',
+        borderColor: overdue ? 'rgba(239,68,68,0.3)' : 'rgba(245,197,24,0.25)',
+        boxShadow: overdue ? '0 0 20px rgba(239,68,68,0.08)' : '0 0 20px rgba(245,197,24,0.06)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+        <div style={{
+          width: '42px', height: '42px', borderRadius: '12px', flexShrink: 0,
+          background: overdue ? 'rgba(239,68,68,0.12)' : 'rgba(245,197,24,0.12)',
+          border: `1px solid ${overdue ? 'rgba(239,68,68,0.3)' : 'rgba(245,197,24,0.3)'}`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px',
+        }}>⚡</div>
+        <div style={{ flex: 1, minWidth: '160px' }}>
+          <div style={{ fontSize: '10px', color: overdue ? '#ef4444' : 'var(--accent)', fontWeight: 700, letterSpacing: '0.4px', marginBottom: '3px' }}>
+            UP NEXT{overdue ? ' · OVERDUE' : ''}
+          </div>
+          <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>{task.title}</div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{ color: pColor, fontWeight: 600 }}>{task.priority}</span>
+            {relative && <><span>·</span><span style={{ color: overdue ? '#ef4444' : 'var(--text-muted)' }}>{relative}</span></>}
+          </div>
+        </div>
+        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent)', flexShrink: 0 }}>+{task.coinsReward}</span>
+        <Link href="/tasks" style={{ textDecoration: 'none' }}>
+          <button className="btn-outline" style={{ fontSize: '12px', padding: '7px 14px' }}>View</button>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const [tasks,    setTasks]    = useState([]);
   const [groups,   setGroups]   = useState([]);
@@ -44,6 +101,7 @@ export default function DashboardPage() {
   const [xp,       setXp]       = useState(null);
   const [user,     setUser]     = useState(null);
   const [loading,  setLoading]  = useState(true);
+  const [upNext,   setUpNext]   = useState(null);
   const [showTour, setShowTour] = useState(false);
   const [entered,  setEntered]  = useState(false);
 
@@ -61,13 +119,14 @@ export default function DashboardPage() {
 
   const fetchData = async () => {
     try {
-      const [tasksRes, groupsRes, coinsRes, xpRes] = await Promise.all([
-        getMyTasks(), getMyGroups(), getMyCoins(), getMyXP()
+      const [tasksRes, groupsRes, coinsRes, xpRes, upNextRes] = await Promise.all([
+        getMyTasks(), getMyGroups(), getMyCoins(), getMyXP(), getUpNextTask().catch(() => ({ data: null }))
       ]);
       setTasks(tasksRes.data);
       setGroups(groupsRes.data);
       setCoins(coinsRes.data.coins);
       setXp(xpRes.data);
+      setUpNext(upNextRes.data);
       localStorage.setItem('coins', coinsRes.data.coins);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
@@ -125,6 +184,8 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        <UpNextCard task={upNext} />
 
         {/* ── XP Bar ── */}
         {xp && (
