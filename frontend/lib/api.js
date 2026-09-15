@@ -31,6 +31,7 @@ export const deleteAccount = (data) => API.delete('/auth/account', { data });
 export const requestEmailChange = (data) => API.post('/auth/email-change/request', data);
 export const confirmEmailChange = (data) => API.post('/auth/email-change/confirm', data);
 export const completeTour = () => API.post('/auth/tour-complete');
+export const getMe = () => API.get('/auth/me');
 
 /* INVITE & REGISTRATION */
 export const validateInvite = (token) => API.get(`/invite/validate?token=${token}`);

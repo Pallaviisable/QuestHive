@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getMyTasks, getMyGroups, getMyCoins, getMyXP, getGroupHealth, getUpNextTask } from '@/lib/api';
+import { getMyTasks, getMyGroups, getMyCoins, getMyXP, getGroupHealth, getUpNextTask, getMe } from '@/lib/api';
 import OnboardingTour from '@/components/OnboardingTour';
 import StreakWidget from '@/components/StreakWidget';
 
@@ -110,7 +110,17 @@ export default function DashboardPage() {
     if (stored) {
       const u = JSON.parse(stored);
       setUser(u);
+      // Use cached value for an instant render, but don't trust it as final —
+      // a persistent session on this device can be stale if the tour was
+      // completed on a different device/session. Reconcile against the server.
       if (!u.hasSeenTour) setShowTour(true);
+
+      getMe().then(res => {
+        const fresh = res.data;
+        setUser(fresh);
+        localStorage.setItem('user', JSON.stringify(fresh));
+        setShowTour(!fresh.hasSeenTour);
+      }).catch(() => {});
     }
     const wasLogin = localStorage.getItem('loginSuccess');
     if (wasLogin) { localStorage.removeItem('loginSuccess'); setEntered(true); }
