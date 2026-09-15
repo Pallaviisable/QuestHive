@@ -3,25 +3,37 @@
 import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
-  getConversations,
-  getMessages,
+  getMyConversations,
+  getDmMessages,
   sendDirectMessage,
-  getOrCreateConversation,
-  getGroupMembers, // used to populate the "new message" picker
+  startConversation,
+  markConversationRead,
+  getMyGroups,
+  getGroupDetail,
 } from '@/lib/api';
 
 const POLL_MS = 4000;
 
+function getCurrentUser() {
+  if (typeof window === 'undefined') return null;
+  try {
+    return JSON.parse(localStorage.getItem('user'));
+  } catch {
+    return null;
+  }
+}
+
 function ChatPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const me = getCurrentUser();
 
   const [conversations, setConversations] = useState([]);
+  const [memberMap, setMemberMap] = useState({}); // userId -> { fullName, avatarColor, email }
   const [activeId, setActiveId] = useState(searchParams.get('c') || null);
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [members, setMembers] = useState([]);
   const [loadingThread, setLoadingThread] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
@@ -29,12 +41,34 @@ function ChatPageInner() {
   const threadEndRef = useRef(null);
   const pollRef = useRef(null);
 
+  // ---- resolve member names/avatars from the user's first group ----
+  useEffect(() => {
+    getMyGroups()
+      .then(async (res) => {
+        const groups = res.data;
+        if (!groups?.length) return;
+        // NOTE: defaults to the first group — tell me if you're in more than
+        // one family group and want a switcher instead.
+        const detail = await getGroupDetail(groups[0].id);
+        const members = detail.data.members || detail.data.memberList || [];
+        const map = {};
+        members.forEach((m) => {
+          map[m.id] = { fullName: m.fullName, avatarColor: m.avatarColor, email: m.email };
+        });
+        setMemberMap(map);
+      })
+      .catch(() => setError('Could not load group members.'));
+  }, []);
+
+  const otherIdOf = (convo) =>
+    convo.participantIds?.find((id) => id !== me?.id);
+
   // ---- conversation list ----
   const loadConversations = useCallback(async () => {
     try {
-      const data = await getConversations();
-      setConversations(data);
-    } catch (e) {
+      const res = await getMyConversations();
+      setConversations(res.data);
+    } catch {
       setError('Could not load conversations.');
     }
   }, []);
@@ -49,9 +83,9 @@ function ChatPageInner() {
   const loadThread = useCallback(async (conversationId) => {
     if (!conversationId) return;
     try {
-      const data = await getMessages(conversationId);
-      setMessages(data);
-    } catch (e) {
+      const res = await getDmMessages(conversationId);
+      setMessages(res.data);
+    } catch {
       setError('Could not load this conversation.');
     }
   }, []);
@@ -60,6 +94,7 @@ function ChatPageInner() {
     if (!activeId) return;
     setLoadingThread(true);
     loadThread(activeId).finally(() => setLoadingThread(false));
+    markConversationRead(activeId).catch(() => {});
 
     clearInterval(pollRef.current);
     pollRef.current = setInterval(() => loadThread(activeId), POLL_MS);
@@ -76,25 +111,13 @@ function ChatPageInner() {
   };
 
   // ---- new message picker ----
-  const openPicker = async () => {
-    setPickerOpen(true);
-    if (members.length === 0) {
-      try {
-        const data = await getGroupMembers();
-        setMembers(data);
-      } catch (e) {
-        setError('Could not load members.');
-      }
-    }
-  };
-
   const startConversationWith = async (memberId) => {
     try {
-      const convo = await getOrCreateConversation(memberId);
+      const res = await startConversation(memberId);
       setPickerOpen(false);
       await loadConversations();
-      openConversation(convo.id);
-    } catch (e) {
+      openConversation(res.data.id);
+    } catch {
       setError('Could not start conversation.');
     }
   };
@@ -107,18 +130,19 @@ function ChatPageInner() {
     setSending(true);
     setDraft('');
     try {
-      const msg = await sendDirectMessage(activeId, text);
-      setMessages((prev) => [...prev, msg]);
-      loadConversations(); // refresh last-message preview / ordering
-    } catch (e) {
+      const res = await sendDirectMessage(activeId, text);
+      setMessages((prev) => [...prev, res.data]);
+      loadConversations();
+    } catch {
       setError('Message failed to send.');
-      setDraft(text); // put it back so nothing's lost
+      setDraft(text);
     } finally {
       setSending(false);
     }
   };
 
   const activeConvo = conversations.find((c) => c.id === activeId);
+  const activeOther = activeConvo ? memberMap[otherIdOf(activeConvo)] : null;
 
   return (
     <div style={styles.wrapper}>
@@ -126,7 +150,7 @@ function ChatPageInner() {
       <aside style={styles.sidebar}>
         <div style={styles.sidebarHeader}>
           <h2 style={styles.sidebarTitle}>Messages</h2>
-          <button style={styles.newBtn} onClick={openPicker} title="New message">
+          <button style={styles.newBtn} onClick={() => setPickerOpen(true)} title="New message">
             +
           </button>
         </div>
@@ -136,82 +160,63 @@ function ChatPageInner() {
         )}
 
         <ul style={styles.convoList}>
-          {conversations.map((c) => (
-            <li
-              key={c.id}
-              onClick={() => openConversation(c.id)}
-              style={{
-                ...styles.convoItem,
-                ...(c.id === activeId ? styles.convoItemActive : {}),
-              }}
-            >
-              <div
+          {conversations.map((c) => {
+            const other = memberMap[otherIdOf(c)];
+            return (
+              <li
+                key={c.id}
+                onClick={() => openConversation(c.id)}
                 style={{
-                  ...styles.avatar,
-                  backgroundColor: c.otherMember?.avatarColor || '#999',
+                  ...styles.convoItem,
+                  ...(c.id === activeId ? styles.convoItemActive : {}),
                 }}
               >
-                {c.otherMember?.fullName?.[0]?.toUpperCase() || '?'}
-              </div>
-              <div style={styles.convoMeta}>
-                <div style={styles.convoName}>{c.otherMember?.fullName}</div>
-                <div style={styles.convoPreview}>
-                  {c.lastMessagePreview || 'Say hello 👋'}
+                <div style={{ ...styles.avatar, backgroundColor: other?.avatarColor || '#999' }}>
+                  {other?.fullName?.[0]?.toUpperCase() || '?'}
                 </div>
-              </div>
-              {c.unreadCount > 0 && (
-                <span style={styles.unreadBadge}>{c.unreadCount}</span>
-              )}
-            </li>
-          ))}
+                <div style={styles.convoMeta}>
+                  <div style={styles.convoName}>{other?.fullName || 'Unknown'}</div>
+                  <div style={styles.convoPreview}>
+                    {c.lastMessagePreview || 'Say hello 👋'}
+                  </div>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       </aside>
 
       {/* ---- thread ---- */}
       <main style={styles.thread}>
         {!activeId && (
-          <div style={styles.threadEmpty}>
-            Pick a conversation, or start a new one.
-          </div>
+          <div style={styles.threadEmpty}>Pick a conversation, or start a new one.</div>
         )}
 
         {activeId && (
           <>
             <div style={styles.threadHeader}>
-              <div
-                style={{
-                  ...styles.avatar,
-                  backgroundColor: activeConvo?.otherMember?.avatarColor || '#999',
-                }}
-              >
-                {activeConvo?.otherMember?.fullName?.[0]?.toUpperCase() || '?'}
+              <div style={{ ...styles.avatar, backgroundColor: activeOther?.avatarColor || '#999' }}>
+                {activeOther?.fullName?.[0]?.toUpperCase() || '?'}
               </div>
-              <span style={styles.threadName}>
-                {activeConvo?.otherMember?.fullName || 'Conversation'}
-              </span>
+              <span style={styles.threadName}>{activeOther?.fullName || 'Conversation'}</span>
             </div>
 
             <div style={styles.threadBody}>
               {loadingThread && <p style={styles.emptyText}>Loading…</p>}
               {!loadingThread &&
-                messages.map((m) => (
-                  <div
-                    key={m.id}
-                    style={{
-                      ...styles.bubbleRow,
-                      justifyContent: m.mine ? 'flex-end' : 'flex-start',
-                    }}
-                  >
+                messages.map((m) => {
+                  const mine = m.senderId === me?.id;
+                  return (
                     <div
-                      style={{
-                        ...styles.bubble,
-                        ...(m.mine ? styles.bubbleMine : styles.bubbleTheirs),
-                      }}
+                      key={m.id}
+                      style={{ ...styles.bubbleRow, justifyContent: mine ? 'flex-end' : 'flex-start' }}
                     >
-                      {m.content}
+                      <div style={{ ...styles.bubble, ...(mine ? styles.bubbleMine : styles.bubbleTheirs) }}>
+                        {m.content}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               <div ref={threadEndRef} />
             </div>
 
@@ -236,21 +241,19 @@ function ChatPageInner() {
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h3 style={styles.sidebarTitle}>New message</h3>
             <ul style={styles.convoList}>
-              {members.map((m) => (
-                <li
-                  key={m.id}
-                  style={styles.convoItem}
-                  onClick={() => startConversationWith(m.id)}
-                >
-                  <div style={{ ...styles.avatar, backgroundColor: m.avatarColor }}>
-                    {m.fullName?.[0]?.toUpperCase()}
-                  </div>
-                  <div style={styles.convoMeta}>
-                    <div style={styles.convoName}>{m.fullName}</div>
-                    <div style={styles.convoPreview}>{m.email}</div>
-                  </div>
-                </li>
-              ))}
+              {Object.entries(memberMap)
+                .filter(([id]) => id !== me?.id)
+                .map(([id, m]) => (
+                  <li key={id} style={styles.convoItem} onClick={() => startConversationWith(id)}>
+                    <div style={{ ...styles.avatar, backgroundColor: m.avatarColor }}>
+                      {m.fullName?.[0]?.toUpperCase()}
+                    </div>
+                    <div style={styles.convoMeta}>
+                      <div style={styles.convoName}>{m.fullName}</div>
+                      <div style={styles.convoPreview}>{m.email}</div>
+                    </div>
+                  </li>
+                ))}
             </ul>
           </div>
         </div>
@@ -258,6 +261,14 @@ function ChatPageInner() {
 
       {error && <div style={styles.errorToast}>{error}</div>}
     </div>
+  );
+}
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={null}>
+      <ChatPageInner />
+    </Suspense>
   );
 }
 
@@ -275,7 +286,6 @@ const styles = {
   convoMeta: { minWidth: 0, flex: 1 },
   convoName: { fontWeight: 600, fontSize: 14 },
   convoPreview: { fontSize: 12, color: '#888', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-  unreadBadge: { background: '#e74c3c', color: '#fff', fontSize: 11, borderRadius: 10, padding: '2px 7px' },
   thread: { flex: 1, display: 'flex', flexDirection: 'column' },
   threadEmpty: { margin: 'auto', color: '#888' },
   threadHeader: { display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px', borderBottom: '1px solid #e5e5ef', background: '#fff' },
@@ -292,11 +302,3 @@ const styles = {
   modal: { width: 360, maxHeight: '70vh', overflowY: 'auto', background: '#fff', borderRadius: 12, padding: 16 },
   errorToast: { position: 'fixed', bottom: 20, right: 20, background: '#e74c3c', color: '#fff', padding: '10px 16px', borderRadius: 8, fontSize: 14 },
 };
-
-export default function ChatPage() {
-  return (
-    <Suspense fallback={null}>
-      <ChatPageInner />
-    </Suspense>
-  );
-}

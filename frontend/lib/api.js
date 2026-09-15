@@ -152,3 +152,11 @@ export const planStreakPause = (data) => API.post('/rewards/streak/pause', data)
 export const submitProof = (taskId, photo)  => API.post(`/tasks/${taskId}/submit-proof`, { photo });
 export const approveTask = (taskId)         => API.post(`/tasks/${taskId}/approve`);
 export const rejectTask  = (taskId, reason) => API.post(`/tasks/${taskId}/reject`, reason ? { reason } : {});
+
+/* DIRECT MESSAGES */
+export const getMyConversations   = ()                          => API.get('/dm/conversations');
+export const startConversation    = (otherUserId, taskId = null) => API.post('/dm/conversations/start', taskId ? { otherUserId, taskId } : { otherUserId });
+export const getDmMessages        = (conversationId)             => API.get(`/dm/${conversationId}/messages`);
+export const sendDirectMessage    = (conversationId, content)    => API.post(`/dm/${conversationId}/messages`, { content });
+export const markConversationRead = (conversationId)             => API.post(`/dm/${conversationId}/read`);
+export const getDmUnreadCount     = ()                           => API.get('/dm/unread-count');
