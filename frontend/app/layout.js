@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
-import { getNotifications, markAllRead, markNotificationRead } from '@/lib/api';
+import { getNotifications, markAllRead, markNotificationRead, getDmUnreadCount, getStreakStatus } from '@/lib/api';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import FeedbackButton from '@/components/FeedbackButton';
@@ -60,6 +60,8 @@ export default function RootLayout({ children }) {
   const [toast, setToast] = useState('');
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [dmUnreadCount, setDmUnreadCount] = useState(0);
+  const [streakCount, setStreakCount] = useState(0);
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const notifRef = useRef(null);
   const stompRef = useRef(null);
@@ -83,6 +85,14 @@ export default function RootLayout({ children }) {
         setUnreadCount(res.data.filter(n => !n.read).length);
       }).catch(() => {});
 
+      getDmUnreadCount().then(res => {
+        setDmUnreadCount(res.data?.unreadCount || 0);
+      }).catch(() => {});
+
+      getStreakStatus().then(res => {
+        setStreakCount(res.data?.streak || 0);
+      }).catch(() => {});
+
       // WebSocket for real-time notifications (polling fallback — no Turbopack issues)
       if (!stompRef.current) {
         stompRef.current = true;
@@ -90,6 +100,9 @@ export default function RootLayout({ children }) {
           getNotifications().then(res => {
             setNotifications(res.data);
             setUnreadCount(res.data.filter(n => !n.read).length);
+          }).catch(() => {});
+          getDmUnreadCount().then(res => {
+            setDmUnreadCount(res.data?.unreadCount || 0);
           }).catch(() => {});
         };
         const interval = setInterval(pollNotifications, 15000);
@@ -183,8 +196,8 @@ export default function RootLayout({ children }) {
           user={user}
           isSuperAdmin={isSuperAdmin}
           coins={coins}
-          streakCount={0}
-          unreadDmCount={0}
+          streakCount={streakCount}
+          unreadDmCount={dmUnreadCount}
           sidebarOpen={sidebarOpen}
           onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           onBack={() => router.back()}

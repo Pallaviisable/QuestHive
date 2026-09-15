@@ -1,14 +1,33 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { getStreakStatus, restoreStreak } from '@/lib/api';
+import { getStreakStatus, restoreStreak, planStreakPause } from '@/lib/api';
 
 export default function StreakWidget() {
   const [streak, setStreak] = useState(null);
   const [restoring, setRestoring] = useState(false);
+  const [pausePicker, setPausePicker] = useState(false);
+  const [pauseDays, setPauseDays] = useState(3);
+  const [pausing, setPausing] = useState(false);
+  const [pauseError, setPauseError] = useState('');
 
   useEffect(() => {
     getStreakStatus().then(r => setStreak(r.data)).catch(() => {});
   }, []);
+
+  const handlePlanPause = async () => {
+    setPausing(true);
+    setPauseError('');
+    try {
+      await planStreakPause({ days: pauseDays });
+      const res = await getStreakStatus();
+      setStreak(res.data);
+      setPausePicker(false);
+    } catch (err) {
+      setPauseError(err.response?.data?.message || 'Could not set pause.');
+    } finally {
+      setPausing(false);
+    }
+  };
 
   const handleRestore = async () => {
     setRestoring(true);
@@ -81,6 +100,60 @@ export default function StreakWidget() {
         >
           {restoring ? 'Restoring…' : `Restore for ${streak.restoreCost} coins`}
         </button>
+      )}
+
+      {!streak.plannedPauseUntil && (
+        <div style={{ flexShrink: 0 }}>
+          {!pausePicker ? (
+            <button
+              onClick={() => setPausePicker(true)}
+              style={{
+                padding: '8px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: 700,
+                background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)',
+                color: '#3b82f6', cursor: 'pointer',
+              }}
+            >
+              ⏸ Plan a pause
+            </button>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <select
+                value={pauseDays}
+                onChange={e => setPauseDays(Number(e.target.value))}
+                style={{
+                  background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: '8px',
+                  color: '#fff', padding: '7px 10px', fontSize: '12px', outline: 'none',
+                }}
+              >
+                {[1,2,3,4,5,6,7].map(d => <option key={d} value={d}>{d} day{d>1?'s':''}</option>)}
+              </select>
+              <button
+                onClick={handlePlanPause}
+                disabled={pausing}
+                style={{
+                  padding: '7px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 700,
+                  background: '#3b82f6', color: '#fff', border: 'none',
+                  cursor: pausing ? 'default' : 'pointer', opacity: pausing ? 0.6 : 1,
+                }}
+              >
+                {pausing ? 'Setting…' : 'Confirm'}
+              </button>
+              <button
+                onClick={() => { setPausePicker(false); setPauseError(''); }}
+                style={{
+                  padding: '7px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 600,
+                  background: 'transparent', color: 'var(--text-muted)', border: '1px solid #2a2a2a',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+          {pauseError && (
+            <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '6px' }}>{pauseError}</div>
+          )}
+        </div>
       )}
     </div>
   );
