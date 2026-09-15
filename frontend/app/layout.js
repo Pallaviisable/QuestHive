@@ -4,12 +4,14 @@ import { getNotifications, markAllRead, markNotificationRead } from '@/lib/api';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import FeedbackButton from '@/components/FeedbackButton';
+import Navbar from '@/components/Navbar';
 import './globals.css';
 
 const memberNavItems = [
   { label: 'Dashboard', href: '/dashboard', svgIcon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
   { label: 'Groups',    href: '/groups',    svgIcon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z' },
   { label: 'Tasks',     href: '/tasks',     svgIcon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
+  { label: 'Chat',      href: '/chat',      svgIcon: 'M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z' },
   { label: 'Rewards',   href: '/rewards',   svgIcon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
   { label: 'Settings',  href: '/settings',  svgIcon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065zM15 12a3 3 0 11-6 0 3 3 0 016 0z' },
 ];
@@ -177,133 +179,23 @@ export default function RootLayout({ children }) {
           </div>
         )}
 
-        {/* TOP NAVBAR */}
-        <nav style={{
-          position: 'sticky', top: 0, zIndex: 150,
-          background: 'rgba(17,17,17,0.97)',
-          backdropFilter: 'blur(16px)',
-          borderBottom: '1px solid #2a2a2a',
-          padding: '0 20px',
-          height: '60px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          flexShrink: 0,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', padding: '6px', display: 'flex', flexDirection: 'column', gap: '5px' }}
-            >
-              <span style={{ display: 'block', width: '22px', height: '2px', background: '#fff', borderRadius: '2px', transition: 'all 0.3s', transform: sidebarOpen ? 'rotate(45deg) translateY(7px)' : 'none' }} />
-              <span style={{ display: 'block', width: '22px', height: '2px', background: '#fff', borderRadius: '2px', transition: 'all 0.3s', opacity: sidebarOpen ? 0 : 1 }} />
-              <span style={{ display: 'block', width: '22px', height: '2px', background: '#fff', borderRadius: '2px', transition: 'all 0.3s', transform: sidebarOpen ? 'rotate(-45deg) translateY(-7px)' : 'none' }} />
-            </button>
-
-            <div style={{ display: 'flex', gap: '2px' }}>
-              <button onClick={() => router.back()} title="Go back"
-                style={{ background: 'none', border: 'none', color: '#a0a0a0', cursor: 'pointer', padding: '6px 8px', borderRadius: '8px', display: 'flex', alignItems: 'center' }}>
-                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-              </button>
-              <button onClick={() => router.forward()} title="Go forward"
-                style={{ background: 'none', border: 'none', color: '#a0a0a0', cursor: 'pointer', padding: '6px 8px', borderRadius: '8px', display: 'flex', alignItems: 'center' }}>
-                <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
-              </button>
-            </div>
-
-            <Link href={isSuperAdmin ? '/superadmin' : '/dashboard'} style={{ textDecoration: 'none' }}>
-              <span style={{ fontSize: '20px', fontWeight: 800, color: '#f5c518' }}>
-                🐝 QuestHive {isSuperAdmin && <span style={{ fontSize: '11px', color: '#a78bfa', fontWeight: 600, marginLeft: '6px' }}>ADMIN</span>}
-              </span>
-            </Link>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            {!isSuperAdmin && (
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                background: 'rgba(245,197,24,0.1)', border: '1px solid rgba(245,197,24,0.3)',
-                borderRadius: '999px', padding: '5px 12px',
-              }}>
-                <span>🪙</span>
-                <span style={{ color: '#f5c518', fontWeight: 700, fontSize: '14px' }}>{coins}</span>
-              </div>
-            )}
-            {/* Bell Notification Icon */}
-            {!isSuperAdmin && (
-              <div ref={notifRef} style={{ position: 'relative' }}>
-                <button onClick={handleOpenNotifications} style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: '#a0a0a0', padding: '6px', borderRadius: '8px',
-                  display: 'flex', alignItems: 'center', position: 'relative',
-                  transition: 'color 0.2s',
-                }} onMouseEnter={e => e.currentTarget.style.color='#f5c518'}
-                   onMouseLeave={e => e.currentTarget.style.color='#a0a0a0'}>
-                  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/>
-                  </svg>
-                  {unreadCount > 0 && (
-                    <span style={{
-                      position: 'absolute', top: '2px', right: '2px',
-                      background: '#ef4444', color: '#fff',
-                      borderRadius: '999px', fontSize: '10px', fontWeight: 700,
-                      minWidth: '16px', height: '16px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      padding: '0 3px', lineHeight: 1,
-                    }}>{unreadCount > 99 ? '99+' : unreadCount}</span>
-                  )}
-                </button>
-
-                {showNotifDropdown && (
-                  <div style={{
-                    position: 'absolute', top: '44px', right: 0,
-                    width: '320px', maxHeight: '420px',
-                    background: '#1a1a1a', border: '1px solid #2a2a2a',
-                    borderRadius: '14px', overflow: 'hidden',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.5)', zIndex: 999,
-                  }}>
-                    <div style={{ padding: '14px 16px', borderBottom: '1px solid #2a2a2a', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontWeight: 700, color: '#fff', fontSize: '14px' }}>🔔 Notifications</span>
-                      <span style={{ fontSize: '11px', color: '#555' }}>{notifications.filter(n=>!n.read).length === 0 ? 'All caught up!' : `${notifications.filter(n=>!n.read).length} unread`}</span>
-                    </div>
-                    <div style={{ overflowY: 'auto', maxHeight: '360px' }}>
-                      {notifications.length === 0 ? (
-                        <div style={{ padding: '32px', textAlign: 'center', color: '#555', fontSize: '13px' }}>
-                          No notifications yet 🐝
-                        </div>
-                      ) : notifications.slice(0, 30).map(n => (
-                        <div key={n.id} style={{
-                          padding: '12px 16px', borderBottom: '1px solid #222',
-                          background: n.read ? 'transparent' : 'rgba(245,197,24,0.04)',
-                          cursor: 'pointer', transition: 'background 0.2s',
-                        }} onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.04)'}
-                           onMouseLeave={e => e.currentTarget.style.background = n.read ? 'transparent' : 'rgba(245,197,24,0.04)'}>
-                          <div style={{ fontWeight: 600, fontSize: '13px', color: '#fff', marginBottom: '3px' }}>{n.title}</div>
-                          <div style={{ fontSize: '12px', color: '#a0a0a0', lineHeight: 1.4 }}>{n.body}</div>
-                          <div style={{ fontSize: '11px', color: '#555', marginTop: '4px' }}>
-                            {new Date(n.createdAt).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{
-                width: '32px', height: '32px', borderRadius: '50%',
-                background: isSuperAdmin ? '#a78bfa' : '#f5c518', color: '#000',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 800, fontSize: '13px',
-              }}>
-                {user?.fullName?.[0]?.toUpperCase() || user?.username?.[0]?.toUpperCase() || 'U'}
-              </div>
-              <button onClick={handleLogout} className="btn-outline" style={{ padding: '5px 12px', fontSize: '12px' }}>
-                Logout
-              </button>
-            </div>
-          </div>
-        </nav>
+        <Navbar
+          user={user}
+          isSuperAdmin={isSuperAdmin}
+          coins={coins}
+          streakCount={0}
+          unreadDmCount={0}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+          onBack={() => router.back()}
+          onForward={() => router.forward()}
+          notifications={notifications}
+          unreadCount={unreadCount}
+          showNotifDropdown={showNotifDropdown}
+          notifRef={notifRef}
+          onOpenNotifications={handleOpenNotifications}
+          onLogout={handleLogout}
+        />
 
         <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
           <aside style={{
