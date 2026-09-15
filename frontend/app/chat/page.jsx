@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   getConversations,
@@ -12,7 +12,7 @@ import {
 
 const POLL_MS = 4000;
 
-export default function ChatPage() {
+function ChatPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -292,3 +292,11 @@ const styles = {
   modal: { width: 360, maxHeight: '70vh', overflowY: 'auto', background: '#fff', borderRadius: 12, padding: 16 },
   errorToast: { position: 'fixed', bottom: 20, right: 20, background: '#e74c3c', color: '#fff', padding: '10px 16px', borderRadius: 8, fontSize: 14 },
 };
+
+export default function ChatPage() {
+  return (
+    <Suspense fallback={null}>
+      <ChatPageInner />
+    </Suspense>
+  );
+}
