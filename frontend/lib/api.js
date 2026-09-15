@@ -68,6 +68,7 @@ export const denyTask = (taskId) => API.post(`/tasks/${taskId}/deny`);
 export const getTasksAssignedByMe = (groupId) => API.get(`/tasks/group/${groupId}/assigned-by-me`);
 export const updateTaskPriority = (taskId, priority) => API.patch(`/tasks/${taskId}/priority`, { priority });
 export const getUpNextTask = () => API.get('/tasks/up-next');
+export const getTaskBuckets = (scope, groupId) => API.get('/tasks/buckets', { params: groupId ? { scope, groupId } : { scope } });
 
 /* LOCATION */
 export const updateLocation = (data) => API.post('/location/update', data);

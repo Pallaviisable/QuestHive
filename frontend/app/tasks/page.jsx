@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { getMyTasks, getMyPersonalTasks, createPersonalTask, updateTaskStatus, deleteTask } from '@/lib/api';
+import { getMyTasks, getMyPersonalTasks, createPersonalTask, updateTaskStatus, deleteTask, getTaskBuckets } from '@/lib/api';
 import TaskCard from '@/components/TaskCard';
 
 const STATUSES   = ['ALL','PENDING','IN_PROGRESS','COMPLETED'];
@@ -20,12 +20,26 @@ export default function TasksPage() {
   const [filterPriority, setFilterPriority] = useState('ALL');
   const [filterCategory, setFilterCategory] = useState('ALL');
   const [form, setForm] = useState({ title:'', description:'', priority:'MEDIUM', category:'WORK', deadline:'' });
+  const [buckets,        setBuckets]        = useState(null);
+  const [bucketsLoading, setBucketsLoading] = useState(false);
 
   useEffect(() => {
     const s = localStorage.getItem('user');
     if (s) setUser(JSON.parse(s));
-    fetchTasks();
+    if (tab === 'BY_DEADLINE') {
+      fetchBuckets();
+    } else {
+      fetchTasks();
+    }
   }, [tab]);
+
+  const fetchBuckets = async () => {
+    setBucketsLoading(true);
+    try {
+      const res = await getTaskBuckets('ASSIGNED_TO_ME');
+      setBuckets(res.data);
+    } catch (e) { console.error(e); } finally { setBucketsLoading(false); }
+  };
 
   const fetchTasks = async () => {
     setLoading(true);
@@ -46,7 +60,7 @@ export default function TasksPage() {
   };
 
   const handleStatus = async (id, status) => {
-    try { await updateTaskStatus(id, status); fetchTasks(); } catch(e){ console.error(e); }
+    try { await updateTaskStatus(id, status); tab === 'BY_DEADLINE' ? fetchBuckets() : fetchTasks(); } catch(e){ console.error(e); }
   };
 
   const handleDelete = async (id) => {
@@ -91,7 +105,7 @@ export default function TasksPage() {
 
         {/* Tabs */}
         <div style={{ display:'flex', gap:'4px', marginBottom:'20px', background:'var(--bg-elevated)', borderRadius:'10px', padding:'4px', width:'fit-content', border:'1px solid var(--border)' }}>
-          {[{ key:'ALL', label:'All Tasks' }, { key:'MYNEST', label:'MyNest' }].map(t => (
+          {[{ key:'ALL', label:'All Tasks' }, { key:'MYNEST', label:'MyNest' }, { key:'BY_DEADLINE', label:'By Deadline' }].map(t => (
             <button key={t.key} onClick={() => setTab(t.key)} style={{
               padding:'7px 18px', borderRadius:'7px', fontSize:'13px', fontWeight:600,
               background: tab === t.key ? 'var(--bg-card)' : 'transparent',
@@ -167,7 +181,53 @@ export default function TasksPage() {
         )}
 
         {/* Content */}
-        {loading ? (
+        {tab === 'BY_DEADLINE' ? (
+          bucketsLoading ? (
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'80px', flexDirection:'column', gap:'14px' }}>
+              <div style={{ width:'28px', height:'28px', border:'2px solid var(--border)', borderTopColor:'var(--accent)', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
+              <span style={{ fontSize:'13px', color:'var(--text-muted)' }}>Loading...</span>
+            </div>
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column', gap:'22px' }}>
+              {[
+                { key:'overdue',  label:'Overdue',    color:'#ef4444' },
+                { key:'today',    label:'Today',      color:'var(--accent)' },
+                { key:'thisWeek', label:'This Week',  color:'#3b82f6' },
+                { key:'later',    label:'Later',      color:'var(--text-muted)' },
+              ].map(({ key, label, color }) => {
+                const bucketTasks = buckets?.[key] || [];
+                if (bucketTasks.length === 0) return null;
+                return (
+                  <div key={key}>
+                    <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'10px' }}>
+                      <span style={{ width:'8px', height:'8px', borderRadius:'50%', background:color, boxShadow:`0 0 6px ${color}60` }} />
+                      <span style={{ fontSize:'13px', fontWeight:700, color:'var(--text-primary)' }}>{label}</span>
+                      <span style={{ fontSize:'12px', color:'var(--text-muted)' }}>({bucketTasks.length})</span>
+                    </div>
+                    <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+                      {bucketTasks.map((task, i) => (
+                        <TaskCard
+                          key={i}
+                          task={task}
+                          user={user}
+                          onStart={(taskId) => handleStatus(taskId, 'IN_PROGRESS')}
+                          onComplete={(taskId) => handleStatus(taskId, 'COMPLETED')}
+                          onDelete={(taskId) => handleDelete(taskId)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              {buckets && Object.values(buckets).every(arr => arr.length === 0) && (
+                <div style={{ textAlign:'center', padding:'64px 20px', background:'var(--bg-card)', borderRadius:'16px', border:'1px solid var(--border)' }}>
+                  <p style={{ color:'var(--text-primary)', fontWeight:700, fontSize:'15px', marginBottom:'6px' }}>Nothing on your plate</p>
+                  <p style={{ color:'var(--text-muted)', fontSize:'13px' }}>No pending tasks assigned to you right now.</p>
+                </div>
+              )}
+            </div>
+          )
+        ) : loading ? (
           <div style={{ display:'flex', alignItems:'center', justifyContent:'center', padding:'80px', flexDirection:'column', gap:'14px' }}>
             <div style={{ width:'28px', height:'28px', border:'2px solid var(--border)', borderTopColor:'var(--accent)', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
             <span style={{ fontSize:'13px', color:'var(--text-muted)' }}>Loading tasks...</span>
