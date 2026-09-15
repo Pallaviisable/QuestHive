@@ -94,11 +94,16 @@ function ChatPageInner() {
       .then(async (res) => {
         const groups = res.data;
         if (!groups?.length) return;
-        const detail = await getGroupDetail(groups[0].id);
-        const members = detail.data.members || detail.data.memberList || [];
+        const details = await Promise.all(
+          groups.map((g) => getGroupDetail(g.id).catch(() => null))
+        );
         const map = {};
-        members.forEach((m) => {
-          map[m.id] = { fullName: m.fullName, avatarColor: m.avatarColor, email: m.email };
+        details.forEach((detail) => {
+          if (!detail) return;
+          const members = detail.data.members || detail.data.memberList || [];
+          members.forEach((m) => {
+            map[m.id] = { fullName: m.fullName, avatarColor: m.avatarColor, email: m.email };
+          });
         });
         setMemberMap(map);
       })
